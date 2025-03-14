@@ -330,9 +330,12 @@ class EmployeeController extends Controller
 
 
 
+        return $this->successResponse(['model' => 'employee'], 'Password updated successfully', ['User_id' => $employe->id]);
+
+
     }
 
-    public function updatedetails(Request $request)
+    public function     updatedetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employees,id',
@@ -358,7 +361,14 @@ class EmployeeController extends Controller
             ]);
             DB::commit();
     
-            return response()->json(['message' => 'Employee details updated successfully'], 200);
+            return $this->successResponse(['model' => 'company'], 'Company and User updated successfully', [
+                'company' => $employee,
+            ]);
+    
+
+            // return response()->json(['message' => 'Employee details updated successfully'], 200);
+
+
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Something went wrong', 'details' => $e->getMessage()], 500);
