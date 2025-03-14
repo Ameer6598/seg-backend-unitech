@@ -84,6 +84,7 @@ class ProductController extends Controller
                 'gender' => 'required',
                 'rim_type' => 'required|numeric',
                 'material' => 'required|numeric',
+                'manufacturer_name'=>'required|numeric',
                 'price' => 'required|numeric|min:0',
                 'available_quantity' => 'required|integer|min:0',
                 'status' => 'required|numeric',
@@ -100,7 +101,7 @@ class ProductController extends Controller
             $product->update(array_merge(
                 $request->except('images'),
                 ['images' => $newImages]
-            ));
+            )); 
 
             DB::commit();
 

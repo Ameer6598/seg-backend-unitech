@@ -145,7 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     });
     Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
-    Route::post('change-employee', [EmployeeController::class, 'updatedetails']);
+    Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
 
 
 
