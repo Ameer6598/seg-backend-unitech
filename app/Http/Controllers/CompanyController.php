@@ -30,13 +30,22 @@ class CompanyController extends Controller
             
             DB::beginTransaction();
     
-
             $logoPath = null;
-            if ($request->hasFile('company_logo')) {
-            $filePath = $request->file('company_logo')->store('company_logos', 'public');
-            $logoPath = '/storage/' . $filePath; // Modify path for database storage
-            }
-    
+                if ($request->hasFile('company_logo')) {
+                    $file = $request->file('company_logo');
+                    $originalName = $file->getClientOriginalName();
+                    $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+                    $destinationPath = public_path('projectimages/company_logos');
+                    if (!file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0777, true);
+                    }
+
+                    $file->move($destinationPath, $fileName);
+
+                    $logoPath = 'projectimages/company_logos/' . $fileName;
+                }
+
+
             // Create company
             $company = Company::create([
                 'company_name' => $request->company_name,
@@ -229,18 +238,30 @@ public function updatedetails(Request $request)
     try {
         $company = Company::findOrFail($request->company_id);
         $user = User::where('company_id', $request->company_id)->where('role', 'company')->firstOrFail();
-
-        $logoPath = $company->company_logo;
-        if ($request->hasFile('company_logo')) {
-            $oldLogoPath = str_replace('/storage/', '', $company->company_logo);
         
-            if ($company->company_logo && Storage::disk('public')->exists($oldLogoPath)) {
-                Storage::disk('public')->delete($oldLogoPath);
+        $logoPath = $company->company_logo;
+
+        if ($request->hasFile('company_logo')) {
+            $oldLogoPath = public_path($company->company_logo);
+        
+            if ($company->company_logo && file_exists($oldLogoPath)) {
+                unlink($oldLogoPath);
             }
         
-            $filePath = $request->file('company_logo')->store('company_logos', 'public');
-            $logoPath = '/storage/' . $filePath;
+
+            $file = $request->file('company_logo');
+            $originalName = $file->getClientOriginalName();
+            $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName); 
+            $destinationPath = public_path('projectimages/company_logos');
+        
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0777, true);
+            }
+        
+            $file->move($destinationPath, $fileName); 
+            $logoPath = 'projectimages/company_logos/' . $fileName; 
         }
+        
         $company->update([
             'company_logo' => $logoPath,
             'phone' => $request->phone ?? $company->phone,
