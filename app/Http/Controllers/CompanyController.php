@@ -89,16 +89,44 @@ class CompanyController extends Controller
                 'email' => 'required|email',
                 'company_id' => 'required',
                 'status' => 'required|in:0,1', // Correct syntax for in rule
+                'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+
+
             ]);
             DB::beginTransaction();
 
             $company = Company::findOrFail($request->company_id);
             $user = User::where('company_id', $request->company_id)->where('role','company')->firstOrFail();
 
+            $logoPath = $company->company_logo;
+
+            if ($request->hasFile('company_logo')) {
+                $oldLogoPath = public_path($company->company_logo);
+            
+                if ($company->company_logo && file_exists($oldLogoPath)) {
+                    unlink($oldLogoPath);
+                }
+            
+    
+                $file = $request->file('company_logo');
+                $originalName = $file->getClientOriginalName();
+                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName); 
+                $destinationPath = public_path('projectimages/company_logos');
+            
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0777, true);
+                }
+            
+                $file->move($destinationPath, $fileName); 
+                $logoPath = 'projectimages/company_logos/' . $fileName; 
+            }
+
+
             $company->update([
                 'company_name' => $request->company_name,
                 'address' => $request->address ?? $company->address,
                 'phone' => $request->phone ?? $company->phone,
+                'company_logo' => $logoPath,
             ]);
 
             $user->update([
