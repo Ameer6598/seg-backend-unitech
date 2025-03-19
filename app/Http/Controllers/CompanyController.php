@@ -98,7 +98,6 @@ class CompanyController extends Controller
             $company = Company::findOrFail($request->company_id);
             $user = User::where('company_id', $request->company_id)->where('role','company')->firstOrFail();
 
-            $logoPath = $company->company_logo;
 
             if ($request->hasFile('company_logo')) {
                 $oldLogoPath = public_path($company->company_logo);
@@ -119,6 +118,8 @@ class CompanyController extends Controller
             
                 $file->move($destinationPath, $fileName); 
                 $logoPath = 'projectimages/company_logos/' . $fileName; 
+
+                $company->company_logo = $logoPath;
             }
 
 
@@ -126,7 +127,6 @@ class CompanyController extends Controller
                 'company_name' => $request->company_name,
                 'address' => $request->address ?? $company->address,
                 'phone' => $request->phone ?? $company->phone,
-                'company_logo' => $logoPath,
             ]);
 
             $user->update([
