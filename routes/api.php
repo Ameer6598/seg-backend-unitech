@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('company')->group(function () {
             Route::get('companies', [CompanyController::class, 'getAll']);
             Route::post('create', [CompanyController::class, 'create']); // Keep "create" if you want
+
             Route::post('{companyId}', [CompanyController::class, 'update']);  
             Route::delete('{companyId}', [CompanyController::class, 'delete']);  
             Route::get('{companyId}', [CompanyController::class, 'getCompany']);  
@@ -115,7 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('employees', [EmployeeController::class, 'getAll']);
             Route::post('create',[EmployeeController::class,'create']);
             Route::post('assign-product',[EmployeeController::class,'assignProduct']);
-            Route::post('update',[EmployeeController::class,'update']);
+            // Route::post('update',[EmployeeController::class,'update']);
             Route::post('update-benefit-amount',[EmployeeController::class,'bulkUpdate']);
             Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
             Route::get('{employeeId}', [EmployeeController::class, 'getEmployee']);
@@ -126,10 +127,12 @@ Route::middleware('auth:sanctum')->group(function () {
         //company itself changing his details
         Route::post('change-company-password', [CompanyController::class, 'companypassword']);
         Route::post('update-company',[CompanyController::class,'updatedetails']);
-
-
     });
 
+        Route::middleware('role:company,owner')->group(function () {
+            Route::post('employee/update', [EmployeeController::class, 'update']);
+        });
+    
     
 
 
@@ -137,15 +140,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::middleware('role:employee')->group(function () {
-
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
         Route::post('create-order', [OrderController::class, 'storeOrder']);
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
         //employee itself changing his details
 
+        Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
+        Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
+
     });
-    Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
-    Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
+
 
 
 
