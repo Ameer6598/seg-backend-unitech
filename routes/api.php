@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('delete/{productId}', [ProductController::class, 'deleteProduct']);
         });
         Route::get('get-all-orders', [OrderController::class, 'getAllOrders']);
+        Route::post('update-order/{id}', [OrderController::class, 'updateOrder']);
         Route::post('update-order-status', [OrderController::class, 'updateOrderStatus']);
         Route::get('employees', [EmployeeController::class, 'getAll']);
 

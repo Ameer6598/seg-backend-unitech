@@ -79,124 +79,119 @@ trait common
     }
 
     public function getOrders(Request $request, $type)
-{
-
-    $query = "SELECT
-                o.*,  -- All columns from orders
-                JSON_PRETTY(
-                    JSON_OBJECT(
-                        'employee', employees.employee_data,
-                        'company', companies.company_data
-                    )
-                ) AS `data`
-            FROM
-                orders o
-            LEFT JOIN (
-                SELECT
-                    e.id,
-                    JSON_OBJECT(
-                        'employee_id', e.id,
-                        'employee_name', (
-                            SELECT name
-                            FROM users
-                            WHERE users.employee_id = e.id
-                            LIMIT 1
-                        ),
-                        'email', (
-                            SELECT email
-                            FROM users
-                            WHERE users.employee_id = e.id
-                            LIMIT 1
+    {
+        $query = "SELECT
+                    o.*,  -- All columns from orders
+                    JSON_PRETTY(
+                        JSON_OBJECT(
+                            'employee', employees.employee_data,
+                            'company', companies.company_data
                         )
-                    ) AS `employee_data`
+                    ) AS `data`
                 FROM
-                    employees e
-                GROUP BY
-                    e.id
-            ) AS employees ON o.employee_id = employees.id
-
-            LEFT JOIN (
-                SELECT
-                    c.id,
-                    JSON_OBJECT(
-                        'company_id', c.id,
-                        'company_name', (
-                            SELECT name
-                            FROM users
-                            WHERE users.company_id = c.id
-                            AND users.role = 'company'
-                            LIMIT 1
-                        ),
-                        'email', (
-                            SELECT email
-                            FROM users
-                            WHERE users.company_id = c.id
-                            AND users.role = 'company'
-                            LIMIT 1
-                        )
-                    ) AS `company_data`
-                FROM
-                    companies c
-                GROUP BY
-                    c.id
-            ) AS companies ON o.company_id = companies.id
-            
-            ";
-
-
-
-    $conditions = [];
-    $parameters = [];
-
-    if ($request->has('order_type')) {
-        $conditions[] = "o.order_type = ?";
-        $parameters[] = $request->order_type;
-    }
-
-    if ($request->has('order_status')) {
-        $conditions[] = "o.order_status = ?";
-        $parameters[] = $request->order_status;
-    }
-
-    if ($type == 'employee') {
-        $conditions[] = "o.employee_id = ?";
-        $parameters[] = auth('sanctum')->user()->employee_id;
-    }
-
-    if ($type == 'company') {
-        $conditions[] = "o.company_id = ?";
-        $parameters[] = auth('sanctum')->user()->company_id;
-    }
-
-    if (!empty($conditions)) {
-        $query .= " WHERE " . implode(" AND ", $conditions);
-    }
-    $query = $query . ' ORDER BY o.id';
-    $orders = DB::select($query, $parameters);
+                    orders o
+                LEFT JOIN (
+                    SELECT
+                        e.id,
+                        JSON_OBJECT(
+                            'employee_id', e.id,
+                            'employee_name', (
+                                SELECT name
+                                FROM users
+                                WHERE users.employee_id = e.id
+                                LIMIT 1
+                            ),
+                            'email', (
+                                SELECT email
+                                FROM users
+                                WHERE users.employee_id = e.id
+                                LIMIT 1
+                            )
+                        ) AS `employee_data`
+                    FROM
+                        employees e
+                    GROUP BY
+                        e.id
+                ) AS employees ON o.employee_id = employees.id
     
-    foreach ($orders as $order) {
-    // Ensure $order->data is a decoded object or array
-    if (is_string($order->data)) {
-        $order->data = json_decode($order->data);
-    }
-
-    // Check if $order->data is now an object before accessing properties
-    if (is_object($order->data) && isset($order->data->employee)) {
-        $order->employee_data = is_string($order->data->employee) ? json_decode($order->data->employee) : $order->data->employee;
-    }
-
-    if (is_object($order->data) && isset($order->data->company)) {
-        $order->company_data = is_string($order->data->company) ? json_decode($order->data->company) : $order->data->company;
-    }
-
-    unset($order->data);
-}
-
-return $orders;
-
-}
-
+                LEFT JOIN (
+                    SELECT
+                        c.id,
+                        JSON_OBJECT(
+                            'company_id', c.id,
+                            'company_name', (
+                                SELECT name
+                                FROM users
+                                WHERE users.company_id = c.id
+                                AND users.role = 'company'
+                                LIMIT 1
+                            ),
+                            'email', (
+                                SELECT email
+                                FROM users
+                                WHERE users.company_id = c.id
+                                AND users.role = 'company'
+                                LIMIT 1
+                            )
+                        ) AS `company_data`
+                    FROM
+                        companies c
+                    GROUP BY
+                        c.id
+                ) AS companies ON o.company_id = companies.id";
     
-
-
+        $conditions = [];
+        $parameters = [];
+    
+        if ($request->has('order_type')) {
+            $conditions[] = "o.order_type = ?";
+            $parameters[] = $request->order_type;
+        }
+    
+        if ($request->has('order_status')) {
+            $conditions[] = "o.order_status = ?";
+            $parameters[] = $request->order_status;
+        }
+    
+        if ($type == 'employee') {
+            $conditions[] = "o.employee_id = ?";
+            $parameters[] = auth('sanctum')->user()->employee_id;
+        }
+    
+        if ($type == 'company') {
+            $conditions[] = "o.company_id = ?";
+            $parameters[] = auth('sanctum')->user()->company_id;
+        }
+    
+        if (!empty($conditions)) {
+            $query .= " WHERE " . implode(" AND ", $conditions);
+        }
+    
+        $query .= ' ORDER BY o.id';
+        $orders = DB::select($query, $parameters);
+    
+        foreach ($orders as $order) {
+            if (is_string($order->data)) {
+                $order->data = json_decode($order->data);
+            }
+    
+            if (is_object($order->data) && isset($order->data->employee)) {
+                $order->employee_data = is_string($order->data->employee) ? json_decode($order->data->employee) : $order->data->employee;
+            }
+    
+            if (is_object($order->data) && isset($order->data->company)) {
+                $order->company_data = is_string($order->data->company) ? json_decode($order->data->company) : $order->data->company;
+            }
+    
+            // Order ke points retrieve karna
+            $order->points = DB::table('order_update_points')
+                ->where('order_id', $order->id)
+                ->pluck('point'); // Sirf points ka array
+    
+            unset($order->data);
+        }
+    
+        return $orders;
+    }
+        
 }
