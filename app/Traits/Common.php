@@ -182,12 +182,11 @@ trait common
             if (is_object($order->data) && isset($order->data->company)) {
                 $order->company_data = is_string($order->data->company) ? json_decode($order->data->company) : $order->data->company;
             }
-    
             // Order ke points retrieve karna
-            $order->points = DB::table('order_update_points')
+            $order->order_points  = DB::table('order_update_points')
                 ->where('order_id', $order->id)
                 ->pluck('point'); // Sirf points ka array
-    
+                
             unset($order->data);
         }
     
