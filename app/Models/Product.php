@@ -46,6 +46,14 @@ class Product extends Model
         return $this->belongsTo(Shape::class, 'shape');
     }
     
+    public function style()
+    {
+
+        return $this->hasOne(Style::class, 'style_id', 'style');
+      
+    }
+
+
     public function manufacturer()
     {
         return $this->hasOne(Manufacturer::class, 'manufacturer_id', 'manufacturer_name');

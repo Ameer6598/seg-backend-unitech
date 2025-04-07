@@ -3,10 +3,11 @@
 namespace App\Imports;
 
 use App\Models\Product;
+use Illuminate\Support\Str;
 use App\Models\ProductImage;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Illuminate\Support\Str;
 
 class ProductsImport implements ToModel, WithHeadingRow
 {
@@ -22,7 +23,7 @@ class ProductsImport implements ToModel, WithHeadingRow
             'product_name' => $row['product_name'],
             'description' => $row['description'],
             'category' => $row['category'],
-            'color' => $row['color'],
+            'color' => 4,
             'frame_sizes' => $row['frame_sizes'],
             'gender' => $this->getGender($row['gender']),
             'age_group' => $row['age_group'],
@@ -48,10 +49,8 @@ class ProductsImport implements ToModel, WithHeadingRow
 
         if (isset($row['images']) && !empty($row['images'])) {
             $images = explode(',', $row['images']);
-        
-            // Ensure the images array is not empty or contains only valid entries
             foreach ($images as $image) {
-                $image = trim($image); // Remove spaces if any
+                $image = trim($image);
                 if (!empty($image)) {
                     ProductImage::create([
                         'product_id' => $product->product_id,
@@ -60,7 +59,17 @@ class ProductsImport implements ToModel, WithHeadingRow
                 }
             }
         }
-        
+
+        $companies = DB::table('companies')->select('id')->get();
+        $mappings = $companies->map(function ($company) use ($product) {
+            return [
+                'product_id' => $product->product_id,
+                'company_id' => $company->id,
+                'created_at' => now(),
+            ];
+        })->toArray();
+
+        DB::table('company_product_mapper')->insert($mappings);
 
         return $product;
     }
