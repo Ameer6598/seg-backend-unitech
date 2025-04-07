@@ -130,7 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
             Route::get('{employeeId}', [EmployeeController::class, 'getEmployee']);
         });
-         //here i am getting all company products
+        Route::get('get-company-products', [ProductController::class, 'getCompanyProducts']);
         Route::get('get-company-orders', [OrderController::class, 'getCompanyOrders']);
 
         //company itself changing his details
@@ -175,6 +175,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-Route::post('/upload-products', [ProductController::class, 'upload'])->name('products.upload');
 
-Route::get('get-company-products', [ProductController::class, 'getCompanyProducts']);
+

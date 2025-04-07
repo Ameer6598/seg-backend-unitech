@@ -13,13 +13,14 @@ use App\Models\Material;
 use App\Models\FrameSize;
 use App\Traits\ApiResponse;
 use App\Models\Manufacturer;
+use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use App\Models\CompanyProduct;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ProductsImport;
-use App\Models\ProductImage;
+use App\Models\EmployeeProduct;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -285,22 +286,32 @@ class ProductController extends Controller
     public function getemployeeProducts()
     {
         try {
-            $baseUrl = config('app.url');
-
-            $products = $this->getMappedProducts('employee');
-            if (!$products) {
-                return $this->errorResponse(['model' => 'products'], 'Product not found', [], 404);
-            }
-            foreach ($products as $product) {
-                $product->images = $this->processImages($product->images, $baseUrl);
-            }
-
+            $employeeId = auth('sanctum')->user()->employee_id;
+            $productIds = EmployeeProduct::where('employee_id', $employeeId)
+            ->pluck('product_id'); // Just get array of product IDs
+    
+    
+            $products = Product::with([
+                'images:id,product_id,image_path',
+                'productcategory:category_id,category_name',
+                'productcolor:color_id,color_name',
+                'framezie:frame_size_id,frame_size_name',
+                'rimtype:rim_type_id,rim_type_name',
+                'material:material_id,material_name',
+                'shape:shape_id,shape_name',
+                'style:style_id,style_name',
+                'manufacturer'
+            ])
+            ->where('product_status', 1)
+            ->get();
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
-                'product' => $products,
-            ]);
+                'products' => $products,
+            ]); 
         } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'products'], $e->getMessage() . $e->getLine(), [], 422);
+            return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
+   
+   
     }
     public function deleteProduct($productId)
     {
