@@ -54,7 +54,7 @@ class ProductController extends Controller
 
             $product = Product::create($request->except('images'));
 
-            // Images ko separately save karna
+
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $imagePath = $this->uploadImages($image, 'products'); // Uploading function ko call karna
@@ -188,48 +188,47 @@ class ProductController extends Controller
                     'rimtype:rim_type_id,rim_type_name',
                     'material:material_id,material_name',
                     'shape:shape_id,shape_name',
+                    'style:style_id,style_name',
                     'manufacturer'
                 ])
-                    ->where('product_status', 1)
-                    ->get();
+                ->where('product_status', 1)
+                ->get();
 
                 // Transform to flat structure
-                $transformedProducts = $products->map(function ($product) {
-                    return [
-                        'product_id' => $product->product_id,
-                        'product_name' => $product->product_name,
-                        'description' => $product->description,
-                        'category' => optional($product->productcategory)->category_name,
-                        'color' => optional($product->productcolor)->color_name,
-                        'frame_sizes' => optional($product->framezie)->frame_size_name,
-                        'gender' => $product->gender,
-                        'age_group' => $product->age_group,
-                        'rim_type' => optional($product->rimtype)->rim_type_name,
-                        'style' => $product->style,
-                        'material' => $product->material,
-                        'shape' => optional($product->shape)->shape_name,
-                        'eye_size' => $product->eye_size,
-                        'manufacturer_name' => optional($product->manufacturer)->manufacturer_name,
-                        'price' => $product->price,
-                        'available_quantity' => $product->available_quantity,
-                        'status' => $product->status,
-                        'product_status' => $product->product_status,
-                        'created_at' => $product->created_at ? $product->created_at->format('Y-m-d H:i:s') : null,
-                        'updated_at' => $product->updated_at ? $product->updated_at->format('Y-m-d H:i:s') : null,
-                        'manufacturer' => $product->manufacturer,
-                        'images' => $product->images,
-                    ];
-                });
+                // $transformedProducts = $products->map(function ($product) {
+                //     return [
+                //         'product_id' => $product->product_id,
+                //         'product_name' => $product->product_name,
+                //         'description' => $product->description,
+                //         'category' => optional($product->productcategory)->category_name,
+                //         'color' => optional($product->productcolor)->color_name,
+                //         'frame_sizes' => optional($product->framezie)->frame_size_name,
+                //         'gender' => $product->gender,
+                //         'age_group' => $product->age_group,
+                //         'rim_type' => optional($product->rimtype)->rim_type_name,
+                //         'style' => optional($product->shape)->style_name,
+                //         'material' => $product->material,
+                //         'shape' => optional($product->shape)->shape_name,
+                //         'eye_size' => $product->eye_size,
+                //         'manufacturer_name' => optional($product->manufacturer)->manufacturer_name,
+                //         'price' => $product->price,
+                //         'available_quantity' => $product->available_quantity,
+                //         'status' => $product->status,
+                //         'product_status' => $product->product_status,
+                //         'created_at' => $product->created_at ? $product->created_at->format('Y-m-d H:i:s') : null,
+                //         'updated_at' => $product->updated_at ? $product->updated_at->format('Y-m-d H:i:s') : null,
+                //         'manufacturer' => $product->manufacturer,
+                //         'images' => $product->images,
+                //     ];
+                // });
 
                 return $this->successResponse(['model' => 'products'], 'All products retrieved successfully', [
-                    'products' => $transformedProducts,
+                    'products' => $products,
                 ]);
             }
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
-
-
 
     }
 
@@ -255,17 +254,26 @@ class ProductController extends Controller
 
     public function getCompanyProducts()
     {
+
         try {
-            $baseUrl = config('app.url');
-
-            $products = $this->getMappedProducts('company');
-            if (!$products) {
-                return $this->errorResponse(['model' => 'products'], 'Product not found', [], 404);
-            }
-            foreach ($products as $product) {
-                $product->images = $this->processImages($product->images, $baseUrl);
-            }
-
+            $companyId = auth('sanctum')->user()->company_id;
+            $productIds = CompanyProduct::where('company_id', $companyId)
+            ->pluck('product_id'); // Just get array of product IDs
+    
+    
+            $products = Product::with([
+                'images:id,product_id,image_path',
+                'productcategory:category_id,category_name',
+                'productcolor:color_id,color_name',
+                'framezie:frame_size_id,frame_size_name',
+                'rimtype:rim_type_id,rim_type_name',
+                'material:material_id,material_name',
+                'shape:shape_id,shape_name',
+                'style:style_id,style_name',
+                'manufacturer'
+            ])
+            ->where('product_status', 1)
+            ->get();
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
                 'products' => $products,
             ]);
@@ -441,21 +449,26 @@ class ProductController extends Controller
 
     public function deleteColor($id)
     {
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'color'], 'You cannot delete this color.', [], 403);
+        }
+    
         DB::beginTransaction();
-
+    
         try {
             $color = Color::findOrFail($id);
             $color->delete();
-
+    
             DB::commit();
-
+    
             return $this->successResponse(['model' => 'color'], 'Color deleted successfully', []);
         } catch (\Exception $e) {
             DB::rollBack();
-
+    
             return $this->errorResponse(['model' => 'color'], $e->getMessage(), [], 422);
         }
     }
+    
 
     public function getFrameSizes()
     {
