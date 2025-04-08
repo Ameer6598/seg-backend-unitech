@@ -160,9 +160,11 @@ class ProductController extends Controller
 
     public function getProductOrAll($productId = null)
     {
-        
+
         try {
             $baseUrl = config('app.url');
+
+            $mediaURL = env('BASE_URL');
 
             if ($productId) {
                 $product = DB::table('products')
@@ -191,37 +193,18 @@ class ProductController extends Controller
                     'style:style_id,style_name',
                     'manufacturer'
                 ])
-                ->where('product_status', 1)
-                ->get();
+                    ->where('product_status', 1)
+                    ->get();
 
-                // Transform to flat structure
-                // $transformedProducts = $products->map(function ($product) {
-                //     return [
-                //         'product_id' => $product->product_id,
-                //         'product_name' => $product->product_name,
-                //         'description' => $product->description,
-                //         'category' => optional($product->productcategory)->category_name,
-                //         'color' => optional($product->productcolor)->color_name,
-                //         'frame_sizes' => optional($product->framezie)->frame_size_name,
-                //         'gender' => $product->gender,
-                //         'age_group' => $product->age_group,
-                //         'rim_type' => optional($product->rimtype)->rim_type_name,
-                //         'style' => optional($product->shape)->style_name,
-                //         'material' => $product->material,
-                //         'shape' => optional($product->shape)->shape_name,
-                //         'eye_size' => $product->eye_size,
-                //         'manufacturer_name' => optional($product->manufacturer)->manufacturer_name,
-                //         'price' => $product->price,
-                //         'available_quantity' => $product->available_quantity,
-                //         'status' => $product->status,
-                //         'product_status' => $product->product_status,
-                //         'created_at' => $product->created_at ? $product->created_at->format('Y-m-d H:i:s') : null,
-                //         'updated_at' => $product->updated_at ? $product->updated_at->format('Y-m-d H:i:s') : null,
-                //         'manufacturer' => $product->manufacturer,
-                //         'images' => $product->images,
-                //     ];
-                // });
 
+                // Add base URL to image paths
+                $products->map(function ($product) use ($mediaURL) {
+                    $product->images->map(function ($image) use ($mediaURL) {
+                        $image->image_path = $mediaURL . $image->image_path;
+                        return $image;
+                    });
+                    return $product;
+                });
                 return $this->successResponse(['model' => 'products'], 'All products retrieved successfully', [
                     'products' => $products,
                 ]);
@@ -229,7 +212,6 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
-
     }
 
     public function getFullProductDetail($productId)
@@ -258,9 +240,10 @@ class ProductController extends Controller
         try {
             $companyId = auth('sanctum')->user()->company_id;
             $productIds = CompanyProduct::where('company_id', $companyId)
-            ->pluck('product_id'); // Just get array of product IDs
-    
-    
+                ->pluck('product_id'); // Just get array of product IDs
+
+                $mediaURL = env('BASE_URL');
+                
             $products = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
@@ -272,8 +255,18 @@ class ProductController extends Controller
                 'style:style_id,style_name',
                 'manufacturer'
             ])
-            ->where('product_status', 1)
-            ->get();
+                ->where('product_status', 1)
+                ->get();
+
+
+                $products->map(function ($product) use ($mediaURL) {
+                    $product->images->map(function ($image) use ($mediaURL) {
+                        $image->image_path = $mediaURL . $image->image_path;
+                        return $image;
+                    });
+                    return $product;
+                });
+
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
                 'products' => $products,
             ]);
@@ -287,9 +280,9 @@ class ProductController extends Controller
         try {
             $employeeId = auth('sanctum')->user()->employee_id;
             $productIds = EmployeeProduct::where('employee_id', $employeeId)
-            ->pluck('product_id'); // Just get array of product IDs
-    
-    
+                ->pluck('product_id'); // Just get array of product IDs
+
+
             $products = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
@@ -301,16 +294,14 @@ class ProductController extends Controller
                 'style:style_id,style_name',
                 'manufacturer'
             ])
-            ->where('product_status', 1)
-            ->get();
+                ->where('product_status', 1)
+                ->get();
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
                 'products' => $products,
-            ]); 
+            ]);
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
-   
-   
     }
     public function deleteProduct($productId)
     {
@@ -462,23 +453,23 @@ class ProductController extends Controller
         if ($id == 4) {
             return $this->errorResponse(['model' => 'color'], 'You cannot delete this color.', [], 403);
         }
-    
+
         DB::beginTransaction();
-    
+
         try {
             $color = Color::findOrFail($id);
             $color->delete();
-    
+
             DB::commit();
-    
+
             return $this->successResponse(['model' => 'color'], 'Color deleted successfully', []);
         } catch (\Exception $e) {
             DB::rollBack();
-    
+
             return $this->errorResponse(['model' => 'color'], $e->getMessage(), [], 422);
         }
     }
-    
+
 
     public function getFrameSizes()
     {
@@ -969,7 +960,7 @@ class ProductController extends Controller
 
 
 
-    
+
     public function upload(Request $request)
     {
 
@@ -991,12 +982,6 @@ class ProductController extends Controller
             'message' => 'Data imported successfully.',
         ]);
     }
-
-
-
-
-
-
 }
 
 
