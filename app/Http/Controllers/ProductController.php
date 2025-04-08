@@ -243,7 +243,7 @@ class ProductController extends Controller
                 ->pluck('product_id'); // Just get array of product IDs
 
                 $mediaURL = env('BASE_URL');
-                
+
             $products = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
@@ -282,6 +282,7 @@ class ProductController extends Controller
             $productIds = EmployeeProduct::where('employee_id', $employeeId)
                 ->pluck('product_id'); // Just get array of product IDs
 
+                $mediaURL = env('BASE_URL');
 
             $products = Product::with([
                 'images:id,product_id,image_path',
@@ -296,6 +297,17 @@ class ProductController extends Controller
             ])
                 ->where('product_status', 1)
                 ->get();
+
+                $products->map(function ($product) use ($mediaURL) {
+                    $product->images->map(function ($image) use ($mediaURL) {
+                        $image->image_path = $mediaURL . $image->image_path;
+                        return $image;
+                    });
+                    return $product;
+                });
+
+
+
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
                 'products' => $products,
             ]);
