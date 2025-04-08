@@ -97,12 +97,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
     });
     Route::post('/logout', [AuthController::class, 'logout']);
-});
 
-
-
-
-Route::middleware('role:company,owner')->group(function () {
+    
+Route::middleware('role:owner,company')->group(function () {
 
     // Categories
     Route::post('/categories', [ProductController::class, 'createCategory']);
@@ -152,3 +149,9 @@ Route::middleware('role:company,owner')->group(function () {
     Route::post('/manufacturer-update', [ProductController::class, 'updateManufacturer']);
     Route::delete('/manufacturers/{id}', [ProductController::class, 'deleteManufacturer']);
 });
+
+
+});
+
+
+
