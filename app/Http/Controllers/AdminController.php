@@ -18,11 +18,8 @@ class AdminController extends Controller
     public function updateOwnerDetails(Request $request)
     {
 
-
-
         try {
             $user = Auth::user();
-
             if (!$user instanceof User) {
                 return $this->errorResponse(
                     ['model' => 'user'],

@@ -161,7 +161,6 @@ class ProductController extends Controller
     public function getProductOrAll($productId = null)
     {
         
-        
         try {
             $baseUrl = config('app.url');
 
