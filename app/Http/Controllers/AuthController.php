@@ -42,7 +42,7 @@ class AuthController extends Controller
     // }
 
     public function login(Request $request)
-    {
+    { 
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
@@ -60,6 +60,13 @@ class AuthController extends Controller
             ]);
         }
 
+
+        $logourl = env('LOGO_URL');
+        $companyLogo = Company::where('id', $user->company_id)->value('company_logo');
+
+
+        $logoUrl = $companyLogo ? $logourl . $companyLogo : null;
+
         $token = $user->createToken('auth_token')->plainTextToken;
         return $this->successResponse(array('model' => 'users'), 'User Login successfully', [
                 'access_token' => $token,
@@ -67,7 +74,7 @@ class AuthController extends Controller
                 'role' => $user->role, 
                 'benefit_amount' => Employee::where('id', $user->employee_id)->value('benefit_amount'),
                 'order_count' => Order::where('employee_id', $user->employee_id)->count(),
-                'logourl'=> Company::where('id',$user->company_id)->value('company_logo'),
+                'logourl'=> $logoUrl,
             ]);
     }
 
