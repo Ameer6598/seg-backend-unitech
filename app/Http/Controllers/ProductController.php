@@ -276,64 +276,48 @@ class ProductController extends Controller
     }
 
     public function getemployeeProducts(Request $request)
-    {
-        try {
-            $employeeId = auth('sanctum')->user()->employee_id;
-    
-            $page = $request->input('page', 1);
-            $perPage = $request->input('per_page', 10);
-            $offset = ($page - 1) * $perPage;
-    
-            $productIds = EmployeeProduct::where('employee_id', $employeeId)
-                ->pluck('product_id');
-    
-            $mediaURL = env('BASE_URL');
-    
-            $query = Product::with([
-                    'images:id,product_id,image_path',
-                    'productcategory:category_id,category_name',
-                    'productcolor:color_id,color_name',
-                    'framezie:frame_size_id,frame_size_name',
-                    'rimtype:rim_type_id,rim_type_name',
-                    'material:material_id,material_name',
-                    'shape:shape_id,shape_name',
-                    'style:style_id,style_name',
-                    'manufacturer'
-                ])
-                ->whereIn('id', $productIds)
-                ->where('product_status', 1);
-    
-            $total = $query->count();
-    
-            $products = $query
-                ->skip($offset)
-                ->take($perPage)
-                ->get();
-    
-            $products->map(function ($product) use ($mediaURL) {
-                $product->images->map(function ($image) use ($mediaURL) {
-                    $image->image_path = $mediaURL . $image->image_path;
-                    return $image;
-                });
-                return $product;
-            });
-    
-            return $this->successResponse(['model' => 'products'], 'Products retrieved successfully', [
-                'products' => $products,
-                'pagination' => [
-                    'total' => $total,
-                    'current_page' => (int)$page,
-                    'per_page' => (int)$perPage,
-                    'last_page' => ceil($total / $perPage),
-                ]
-            ]);
-    
-        } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
-        }
-    }
-    
+{
+    try {
+        $employeeId = auth('sanctum')->user()->employee_id;
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+        $productIds = EmployeeProduct::where('employee_id', $employeeId)
+            ->pluck('product_id');
 
+        $mediaURL = env('BASE_URL');
+
+        // Fetch paginated products
+        $products = Product::with([
+                'images:id,product_id,image_path',
+                'productcategory:category_id,category_name',
+                'productcolor:color_id,color_name',
+                'framezie:frame_size_id,frame_size_name',
+                'rimtype:rim_type_id,rim_type_name',
+                'material:material_id,material_name',
+                'shape:shape_id,shape_name',
+                'style:style_id,style_name',
+                'manufacturer'
+            ])
+            ->where('product_status', 1)
+            ->whereIn('product_id', $productIds)
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Update image paths
+        $products->getCollection()->transform(function ($product) use ($mediaURL) {
+            $product->images->transform(function ($image) use ($mediaURL) {
+                $image->image_path = $mediaURL . $image->image_path;
+                return $image;
+            });
+            return $product;
+        });
+
+        return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
+            'products' => $products,
+        ]);
+    } catch (\Exception $e) {
+        return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
+    }
+}
 
     public function deleteProduct($productId)
     {

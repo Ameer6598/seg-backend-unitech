@@ -155,3 +155,4 @@ Route::middleware('role:owner,company')->group(function () {
 
 
 
+Route::get('cc', [ProductController::class, 'getemployeeProducts']);
