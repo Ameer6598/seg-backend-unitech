@@ -181,9 +181,6 @@ class EmployeeController extends Controller
         try {
             $companyId = auth('sanctum')->user()->company_id;
     
-
-    
-            
             $page = $request->input('page', 1); 
             $perPage = $request->input('per_page', 10); 
     
@@ -220,6 +217,7 @@ class EmployeeController extends Controller
             return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
         }
     }
+    
     
 
 
