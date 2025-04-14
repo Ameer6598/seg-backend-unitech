@@ -151,72 +151,72 @@ class EmployeeController extends Controller
         }
     }
 
-    // public function getAll()
-    // {
-    //     try {
-    //         $companyId = auth('sanctum')->user()->company_id;
-
-    //         $employees = DB::table('employees')
-    //             ->join('users as u1', 'employees.id', '=', 'u1.employee_id')
-    //             ->join('companies as u2', 'employees.company_id', '=', 'u2.id')
-    //             ->select('employees.*', 'u1.name as employeename', 'u1.status', 'u1.email', 'u2.company_name as companyname')
-    //             ->when($companyId, function ($query, $companyId) {
-    //                 return $query->where('employees.company_id', $companyId);
-    //             })
-    //             ->get();
-    //         if ($employees->isEmpty()) {
-    //             return $this->errorResponse(['model' => 'employee'], 'No employees found', [], 404);
-    //         }
-
-    //         return $this->successResponse(['model' => 'employee'], 'employees retrieved successfully', [
-    //             'employees' => $employees,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
-    //     }
-    // }
-
-    public function getAll(Request $request)
+    public function getAll()
     {
         try {
             $companyId = auth('sanctum')->user()->company_id;
-    
-            $page = $request->input('page', 1); 
-            $perPage = $request->input('per_page', 10); 
-    
 
-            $query = DB::table('employees')
+            $employees = DB::table('employees')
                 ->join('users as u1', 'employees.id', '=', 'u1.employee_id')
                 ->join('companies as u2', 'employees.company_id', '=', 'u2.id')
                 ->select('employees.*', 'u1.name as employeename', 'u1.status', 'u1.email', 'u2.company_name as companyname')
                 ->when($companyId, function ($query, $companyId) {
                     return $query->where('employees.company_id', $companyId);
-                });
-    
-            $total = $query->count();
-    
-            // Apply pagination manually
-            $employees = $query
-                ->forPage($page, $perPage)
+                })
                 ->get();
-    
             if ($employees->isEmpty()) {
                 return $this->errorResponse(['model' => 'employee'], 'No employees found', [], 404);
             }
-    
+
             return $this->successResponse(['model' => 'employee'], 'employees retrieved successfully', [
                 'employees' => $employees,
-                'pagination' => [
-                    'total' => $total,
-                    'current_page' => (int)$page,
-                    'per_page' => (int)$perPage,
-                    'last_page' => ceil($total / $perPage),
-                ]
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
         }
     }
+
+    // public function getAll(Request $request)
+    // {
+    //     try {
+
+    //         $companyId = auth('sanctum')->user()->company_id;
+    
+    //         $page = $request->input('page', 1); 
+    //         $perPage = $request->input('per_page', 10); 
+    
+
+    //         $query = DB::table('employees')
+    //             ->join('users as u1', 'employees.id', '=', 'u1.employee_id')
+    //             ->join('companies as u2', 'employees.company_id', '=', 'u2.id')
+    //             ->select('employees.*', 'u1.name as employeename', 'u1.status', 'u1.email', 'u2.company_name as companyname')
+    //             ->when($companyId, function ($query, $companyId) {
+    //                 return $query->where('employees.company_id', $companyId);
+    //             });
+    
+    //         $total = $query->count();
+    
+    //         $employees = $query
+    //             ->forPage($page, $perPage)
+    //             ->get();
+    
+    //         if ($employees->isEmpty()) {
+    //             return $this->errorResponse(['model' => 'employee'], 'No employees found', [], 404);
+    //         }
+    
+    //         return $this->successResponse(['model' => 'employee'], 'employees retrieved successfully', [
+    //             'employees' => $employees,
+    //             'pagination' => [
+    //                 'total' => $total,
+    //                 'current_page' => (int)$page,
+    //                 'per_page' => (int)$perPage,
+    //                 'last_page' => ceil($total / $perPage),
+    //             ]
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
+    //     }
+    // }
     
     
 
@@ -382,7 +382,7 @@ class EmployeeController extends Controller
 
     }
 
-    public function     updatedetails(Request $request)
+    public function updatedetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employees,id',
