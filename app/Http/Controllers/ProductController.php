@@ -275,16 +275,19 @@ class ProductController extends Controller
         }
     }
 
-    public function getemployeeProducts()
-    {
-        try {
-            $employeeId = auth('sanctum')->user()->employee_id;
-            $productIds = EmployeeProduct::where('employee_id', $employeeId)
-                ->pluck('product_id'); // Just get array of product IDs
+    public function getemployeeProducts(Request $request)
+{
+    try {
+        $employeeId = auth('sanctum')->user()->employee_id;
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+        $productIds = EmployeeProduct::where('employee_id', $employeeId)
+            ->pluck('product_id');
 
-                $mediaURL = env('BASE_URL');
+        $mediaURL = env('BASE_URL');
 
-            $products = Product::with([
+        // Fetch paginated products
+        $products = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
                 'productcolor:color_id,color_name',
@@ -295,26 +298,27 @@ class ProductController extends Controller
                 'style:style_id,style_name',
                 'manufacturer'
             ])
-                ->where('product_status', 1)
-                ->get();
+            ->where('product_status', 1)
+            ->whereIn('product_id', $productIds)
+            ->paginate($perPage, ['*'], 'page', $page);
 
-                $products->map(function ($product) use ($mediaURL) {
-                    $product->images->map(function ($image) use ($mediaURL) {
-                        $image->image_path = $mediaURL . $image->image_path;
-                        return $image;
-                    });
-                    return $product;
-                });
+        // Update image paths
+        $products->getCollection()->transform(function ($product) use ($mediaURL) {
+            $product->images->transform(function ($image) use ($mediaURL) {
+                $image->image_path = $mediaURL . $image->image_path;
+                return $image;
+            });
+            return $product;
+        });
 
-
-
-            return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
-                'products' => $products,
-            ]);
-        } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
-        }
+        return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
+            'products' => $products,
+        ]);
+    } catch (\Exception $e) {
+        return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
     }
+}
+
     public function deleteProduct($productId)
     {
         try {
