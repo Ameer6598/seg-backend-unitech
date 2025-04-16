@@ -9,7 +9,11 @@ use App\Models\Transaction;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use App\Models\ChangesPoints;
+use App\Models\BillingAddress;
+use App\Models\ShippingAddress;
+use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
@@ -18,186 +22,667 @@ class OrderController extends Controller
     use Common;
 
 
-    public function storeOrder(Request $request)
+    // public function storeOrder(Request $request)
+    // {
+    //     try {
+    //         $request->validate([
+    //             'order_type' => 'required|string',
+    //             'frame_type' => 'required|string',
+    //             'frame_prescription' => 'required|string',
+    //             'frame_prescription_type' => 'required|string',
+    //             'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    //             'lense_sizes' => 'required|string',
+    //             'od_left_sphere' => 'nullable|string',
+    //             'blue_light_protection' => 'nullable|string',
+    //             'od_left_cylinders' => 'nullable|string',
+    //             'od_left_axis' => 'nullable|string',
+    //             'od_left_nv_add' => 'nullable|string',
+    //             'od_left_2_pds' => 'nullable|string',
+    //             'od_right_sphere' => 'nullable|string',
+    //             'od_right_cylinders' => 'nullable|string',
+    //             'od_right_axis' => 'nullable|string',
+    //             'od_right_nv_add' => 'nullable|string',
+    //             'od_right_2_pds' => 'nullable|string',
+    //             'lense_use' => 'required|string',
+    //             'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    //             'product_details' => 'required|string',
+    //             'lense_material' => 'required|string',
+    //             'scratch_coating' => 'required|string',
+    //             'lens_tint' => 'required|string',
+    //             'lens_protection' => 'required|string',
+    //             'first_name' => 'required|string',
+    //             'last_name' => 'required|string',
+    //             'email' => 'required|email',
+    //             'country' => 'required|string',
+    //             'city' => 'required|string',
+    //             'address' => 'required|string',
+    //             'zip_postal_code' => 'required|string',
+    //             'phone_number' => 'required|string',
+    //             'payment_method' => 'required|string',
+    //             // 'order_confirmation_number' => 'required|string|unique:orders',
+    //             'product_id' => 'required|integer',
+    //             'product_quantity' => 'required|integer',
+    //             'net_total' => 'required|integer',
+    //         ]);
+
+    //         $employee = Employee::where('id', auth('sanctum')->user()->employee_id)->first();
+    //         if (!$employee || $request->net_total > $employee->benefit_amount) {
+    //             return $this->errorResponse(['model' => 'orders'], 'Net total exceeds the employee benefit amount.', [], 422);
+    //         }
+    //         DB::beginTransaction();
+
+    //         // Prescription Image
+    //         $prescriptionImage = null;
+    //         if ($request->hasFile('prescription_image')) {
+    //             $file = $request->file('prescription_image');
+    //             $originalName = $file->getClientOriginalName();
+    //             $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+    //             $destinationPath = public_path('projectimages/orders/prescriptions');
+    //             if (!file_exists($destinationPath)) {
+    //                 mkdir($destinationPath, 0777, true);
+    //             }
+    //             $file->move($destinationPath, $fileName);
+    //             $prescriptionImage = '/projectimages/orders/prescriptions/' . $fileName;
+    //         }
+
+    //         // Frame Picture
+    //         $framePicture = null;
+    //         if ($request->hasFile('frame_picture')) {
+    //             $file = $request->file('frame_picture');
+    //             $originalName = $file->getClientOriginalName();
+    //             $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+    //             $destinationPath = public_path('projectimages/orders/frames');
+    //             if (!file_exists($destinationPath)) {
+    //                 mkdir($destinationPath, 0777, true);
+    //             }
+    //             $file->move($destinationPath, $fileName);
+    //             $framePicture = '/projectimages/orders/frames/' . $fileName;
+    //         }
+
+    //         $order = Order::create([
+    //             'order_type' => $request->order_type,
+    //             'frame_type' => $request->frame_type,
+    //             'frame_prescription' => $request->frame_prescription,
+    //             'frame_prescription_type' => $request->frame_prescription_type,
+    //             'blue_light_protection' => $request->blue_light_protection,
+    //             'prescription_image' => $prescriptionImage,
+    //             'lense_sizes' => $request->lense_sizes,
+    //             'od_left_sphere' => $request->od_left_sphere,
+    //             'od_left_cylinders' => $request->od_left_cylinders,
+    //             'od_left_axis' => $request->od_left_axis,
+    //             'od_left_nv_add' => $request->od_left_nv_add,
+    //             'od_left_2_pds' => $request->od_left_2_pds,
+    //             'od_right_sphere' => $request->od_right_sphere,
+    //             'od_right_cylinders' => $request->od_right_cylinders,
+    //             'od_right_axis' => $request->od_right_axis,
+    //             'od_right_nv_add' => $request->od_right_nv_add,
+    //             'od_right_2_pds' => $request->od_right_2_pds,
+    //             'lense_use' => $request->lense_use,
+    //             'frame_picture' => $framePicture,
+    //             'product_details' => $request->product_details,
+    //             'lense_material' => $request->lense_material,
+    //             'scratch_coating' => $request->scratch_coating,
+    //             'lens_tint' => $request->lens_tint,
+    //             'lens_protection' => $request->lens_protection,
+    //             'first_name' => $request->first_name,
+    //             'last_name' => $request->last_name,
+    //             'email' => $request->email,
+    //             'country' => $request->country,
+    //             'city' => $request->city,
+    //             'address' => $request->address,
+    //             'zip_postal_code' => $request->zip_postal_code,
+    //             'phone_number' => $request->phone_number,
+    //             'payment_method' => $request->payment_method,
+    //             'order_confirmation_number' => $request->order_confirmation_number,
+    //             'product_id' => $request->product_id,
+    //             'product_quantity' => $request->product_quantity,
+    //             'order_status' => 'Pending',
+    //             'net_total' => $request->net_total,
+    //             'employee_id' => auth('sanctum')->user()->employee_id,
+    //             'company_id' => auth('sanctum')->user()->company_id,
+    //         ]);
+    //         $employee = Employee::findOrFail(auth('sanctum')->user()->employee_id);
+    //         $employee->benefit_amount -= $request->net_total;
+    //         $employee->save();
+    //         $transaction = Transaction::create([
+    //             'employee_id' => auth('sanctum')->user()->employee_id,
+    //             'transaction_type' => 'debit',
+    //             'amount' => $request->net_total ?? '',
+    //             'balance' => $employee->benefit_amount ?? '',
+    //             'description' => 'order',
+    //         ]);
+    //         DB::commit();
+    //         return $this->successResponse(array('model' => 'orders'), 'Order created successfully', [
+    //             'order' => $order,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
+    //     }
+    // }
+
+    public function newPresOrder(Request $request)
     {
-        try {
-            $request->validate([
-                'order_type' => 'required|string',
-                'frame_type' => 'required|string',
-                'frame_prescription' => 'required|string',
-                'frame_prescription_type' => 'required|string',
-                'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-                'lense_sizes' => 'required|string',
-                'od_left_sphere' => 'nullable|string',
-                'blue_light_protection' => 'nullable|string',
-                'od_left_cylinders' => 'nullable|string',
-                'od_left_axis' => 'nullable|string',
-                'od_left_nv_add' => 'nullable|string',
-                'od_left_2_pds' => 'nullable|string',
-                'od_right_sphere' => 'nullable|string',
-                'od_right_cylinders' => 'nullable|string',
-                'od_right_axis' => 'nullable|string',
-                'od_right_nv_add' => 'nullable|string',
-                'od_right_2_pds' => 'nullable|string',
-                'lense_use' => 'required|string',
-                'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-                'product_details' => 'required|string',
-                'lense_material' => 'required|string',
-                'scratch_coating' => 'required|string',
-                'lens_tint' => 'required|string',
-                'lens_protection' => 'required|string',
-                'first_name' => 'required|string',
-                'last_name' => 'required|string',
-                'email' => 'required|email',
-                'country' => 'required|string',
-                'city' => 'required|string',
-                'address' => 'required|string',
-                'zip_postal_code' => 'required|string',
-                'phone_number' => 'required|string',
-                'payment_method' => 'required|string',
-                'order_confirmation_number' => 'required|string|unique:orders',
-                'product_id' => 'required|integer',
-                'product_quantity' => 'required|integer',
-                'net_total' => 'required|integer',
-            ]);
 
-            $employee = Employee::where('id', auth('sanctum')->user()->employee_id)->first();
-            if (!$employee || $request->net_total > $employee->benefit_amount) {
-                return $this->errorResponse(['model' => 'orders'], 'Net total exceeds the employee benefit amount.', [], 422);
-            }
-            DB::beginTransaction();
 
-            // Prescription Image
-            $prescriptionImage = null;
-            if ($request->hasFile('prescription_image')) {
-                $file = $request->file('prescription_image');
-                $originalName = $file->getClientOriginalName();
-                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-                $destinationPath = public_path('projectimages/orders/prescriptions');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-                $file->move($destinationPath, $fileName);
-                $prescriptionImage = '/projectimages/orders/prescriptions/' . $fileName;
-            }
 
-            // Frame Picture
-            $framePicture = null;
-            if ($request->hasFile('frame_picture')) {
-                $file = $request->file('frame_picture');
-                $originalName = $file->getClientOriginalName();
-                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-                $destinationPath = public_path('projectimages/orders/frames');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-                $file->move($destinationPath, $fileName);
-                $framePicture = '/projectimages/orders/frames/' . $fileName;
-            }
+        $validator = Validator::make($request->all(), [
+            'blue_light_protection' => 'required|string',
+            'order_type' => 'required|string|max:255',
+            'lense_sizes' => 'required|string|max:255',
+            'lense_use' => 'required|string|max:255',
+            'product_details' => 'required|string|max:1000',
+            'lense_material' => 'required|string|max:255',
+            'scratch_coating' => 'required',
+            'lens_tint' => 'required|string|max:255',
+            'lens_protection' => 'required|string|max:255',
 
-            $order = Order::create([
-                'order_type' => $request->order_type,
-                'frame_type' => $request->frame_type,
-                'frame_prescription' => $request->frame_prescription,
-                'frame_prescription_type' => $request->frame_prescription_type,
-                'blue_light_protection' => $request->blue_light_protection,
-                'prescription_image' => $prescriptionImage,
-                'lense_sizes' => $request->lense_sizes,
-                'od_left_sphere' => $request->od_left_sphere,
-                'od_left_cylinders' => $request->od_left_cylinders,
-                'od_left_axis' => $request->od_left_axis,
-                'od_left_nv_add' => $request->od_left_nv_add,
-                'od_left_2_pds' => $request->od_left_2_pds,
-                'od_right_sphere' => $request->od_right_sphere,
-                'od_right_cylinders' => $request->od_right_cylinders,
-                'od_right_axis' => $request->od_right_axis,
-                'od_right_nv_add' => $request->od_right_nv_add,
-                'od_right_2_pds' => $request->od_right_2_pds,
-                'lense_use' => $request->lense_use,
-                'frame_picture' => $framePicture,
-                'product_details' => $request->product_details,
-                'lense_material' => $request->lense_material,
-                'scratch_coating' => $request->scratch_coating,
-                'lens_tint' => $request->lens_tint,
-                'lens_protection' => $request->lens_protection,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $request->email,
-                'country' => $request->country,
-                'city' => $request->city,
-                'address' => $request->address,
-                'zip_postal_code' => $request->zip_postal_code,
-                'phone_number' => $request->phone_number,
-                'payment_method' => $request->payment_method,
-                'order_confirmation_number' => $request->order_confirmation_number,
-                'product_id' => $request->product_id,
-                'product_quantity' => $request->product_quantity,
-                'order_status' => 'Pending',
-                'net_total' => $request->net_total,
-                'employee_id' => auth('sanctum')->user()->employee_id,
-                'company_id' => auth('sanctum')->user()->company_id,
-            ]);
-            $employee = Employee::findOrFail(auth('sanctum')->user()->employee_id);
-            $employee->benefit_amount -= $request->net_total;
-            $employee->save();
-            $transaction = Transaction::create([
-                'employee_id' => auth('sanctum')->user()->employee_id,
-                'transaction_type' => 'debit',
-                'amount' => $request->net_total ?? '',
-                'balance' => $employee->benefit_amount ?? '',
-                'description' => 'order',
-            ]);
-            DB::commit();
-            return $this->successResponse(array('model' => 'orders'), 'Order created successfully', [
-                'order' => $order,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
+
+            // Billing details
+            'billing_first_name' => 'required|string|max:255',
+            'billing_last_name' => 'required|string|max:255',
+            'billing_email' => 'required|email|max:255',
+            'billing_country' => 'required|string|max:255',
+            'billing_city' => 'required|string|max:255',
+            'billing_state' => 'required|string|max:255',
+            'billing_address' => 'required|string|max:1000',
+            'billing_zip_postal_code' => 'required|string|max:20',
+            'billing_phone_number' => 'required|string|max:20',
+
+            // Shipping details
+            'shipping_first_name' => 'required|string|max:255',
+            'shipping_last_name' => 'required|string|max:255',
+            'shipping_email' => 'required|email|max:255',
+            'shipping_country' => 'required|string|max:255',
+            'shipping_city' => 'required|string|max:255',
+            'shipping_state' => 'required|string|max:255',
+            'shipping_address' => 'required|string|max:1000',
+            'shipping_zip_postal_code' => 'required|string|max:20',
+            'shipping_phone_number' => 'required|string|max:20',
+            'shipping_additional_information' => 'nullable|string|max:255',
+
+
+
+            'payment_method' => 'required|string|max:100',
+            'product_id' => 'required|integer',
+
+            'color' => 'required|integer ',
+            'frame_size' => 'required',
+
+            'product_quantity' => 'required|integer|min:1',
+            'net_total' => 'required|numeric|min:0',
+            'paid_ammount' => 'nullable|numeric|min:0',
+            // Prescription fields
+            'frame_type' => 'required|string|max:255',
+            'frame_prescription' => 'required|string|max:255',
+            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'od_left_sphere' => 'required|string|max:10',
+            'od_left_cylinders' => 'required|string|max:10',
+            'od_left_axis' => 'required|string|max:10',
+            'od_left_nv_add' => 'required|string|max:10',
+            'od_left_2_pds' => 'required|string|max:10',
+            'od_right_sphere' => 'required|string|max:10',
+            'od_right_cylinders' => 'required|string|max:10',
+            'od_right_axis' => 'required|string|max:10',
+            'od_right_nv_add' => 'required|string|max:10',
+            'od_right_2_pds' => 'required|string|max:10',
+            'pupil_distance' => 'required|string',
+            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'pupil_distance_online' => 'nullable|string',
+            'od_left_2_pds_online' => 'nullable|string|max:10',
+            'od_right_2_pds_online' => 'nullable|string|max:10',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        $employeeId = auth('sanctum')->user()->employee_id;
+        $companyId = auth('sanctum')->user()->company_id;
+
+        $pres = new PrecriptionDetails();
+        $pres->employee_id = $employeeId;
+
+        $pres->fill($request->only([
+            'frame_type',
+            'frame_prescription',
+            'od_left_sphere',
+            'od_left_cylinders',
+            'od_left_axis',
+            'od_left_nv_add',
+            'od_left_2_pds',
+            'od_right_sphere',
+            'od_right_cylinders',
+            'od_right_axis',
+            'od_right_nv_add',
+            'od_right_2_pds',
+            'pupil_distance',
+            'pupil_distance_online',
+            'od_left_2_pds_online',
+            'od_right_2_pds_online',
+
+        ]));
+        if ($request->hasFile('prescription_image')) {
+            $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
+        }
+        if ($request->hasFile('frame_picture')) {
+            $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
+        }
+
+
+
+        $pres->save();
+        $order = new Order();
+        $order->employee_id = $employeeId;
+        $order->company_id = $companyId;
+        $order->fill($request->only([
+            'blue_light_protection',
+            'order_type',
+            'lense_sizes',
+            'lense_use',
+            'product_details',
+            'lense_material',
+            'scratch_coating',
+            'lens_tint',
+            'lens_protection',
+            'payment_method',
+            'product_id',
+            'product_quantity',
+            'net_total',
+            'paid_ammount',
+            'frame_size',
+            'color'
+        ]));
+        $order->order_status = 'pending'; // default status
+        $order->order_confirmation_number = strtoupper(uniqid('CONF'));
+        $order->prescription_id  = $pres->id;
+        $order->save();
+
+
+        $shipping = new ShippingAddress();
+        $shipping->fill([
+            'first_name' => $request->input('shipping_first_name'),
+            'last_name' => $request->input('shipping_last_name'),
+            'email' => $request->input('shipping_email'),
+            'country' => $request->input('shipping_country'),
+            'state' => $request->input('shipping_state'),
+            'city' => $request->input('shipping_city'),
+            'address' => $request->input('shipping_address'),
+            'zip_postal_code' => $request->input('shipping_zip_postal_code'),
+            'phone_number' => $request->input('shipping_phone_number'),
+            'additional_information' => $request->input('shipping_additional_information'),
+        ]);
+
+        $shipping->order_id = $order->id;
+        $shipping->save();
+
+
+        // Save Billing Address
+        $billing = new BillingAddress();
+        $billing->fill([
+            'first_name' => $request->input('billing_first_name'),
+            'last_name' => $request->input('billing_last_name'),
+            'email' => $request->input('billing_email'),
+            'country' => $request->input('billing_country'),
+            'state' => $request->input('billing_state'),
+            'city' => $request->input('billing_city'),
+            'address' => $request->input('billing_address'),
+            'zip_postal_code' => $request->input('billing_zip_postal_code'),
+            'phone_number' => $request->input('billing_phone_number'),
+        ]);
+
+        $billing->order_id = $order->id;
+        $billing->save();
+
+
+
+        // Employee benefit deduction
+        $employee = Employee::findOrFail($employeeId);
+        $employee->benefit_amount -= $request->net_total;
+        $employee->save();
+
+        Transaction::create([
+            'employee_id' => $employeeId,
+            'transaction_type' => 'debit',
+            'amount' => $request->net_total ?? '',
+            'balance' => $employee->benefit_amount ?? '',
+            'description' => 'order',
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Order and prescription details saved successfully.',
+            'order_confire'=>$order->order_confirmation_number,
+            'order_id' => $order->id,
+            'prescription_id' => $pres->id,
+        ]);
+    }
+
+
+    public function existingPresOrder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'blue_light_protection' => 'required|string',
+            'order_type' => 'required|string|max:255',
+            'lense_sizes' => 'required|string|max:255',
+            'lense_use' => 'required|string|max:255',
+            'product_details' => 'required|string|max:1000',
+            'lense_material' => 'required|string|max:255',
+            'scratch_coating' => 'required',
+            'lens_tint' => 'required|string|max:255',
+            'lens_protection' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'country' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'address' => 'required|string|max:1000',
+            'zip_postal_code' => 'required|string|max:20',
+            'phone_number' => 'required|string|max:20',
+            'payment_method' => 'required|string|max:100',
+            'product_id' => 'required|integer',
+            'color' => 'required|integer ',
+            'frame_size' => 'required',
+
+            'product_quantity' => 'required|integer|min:1',
+            'net_total' => 'required|numeric|min:0',
+            'paid_ammount' => 'nullable|numeric|min:0',
+
+
+
+
+
+            // Billing details
+            'billing_first_name' => 'required|string|max:255',
+            'billing_last_name' => 'required|string|max:255',
+            'billing_email' => 'required|email|max:255',
+            'billing_country' => 'required|string|max:255',
+            'billing_city' => 'required|string|max:255',
+            'billing_state' => 'required|string|max:255',
+            'billing_address' => 'required|string|max:1000',
+            'billing_zip_postal_code' => 'required|string|max:20',
+            'billing_phone_number' => 'required|string|max:20',
+
+            // Shipping details
+            'shipping_first_name' => 'required|string|max:255',
+            'shipping_last_name' => 'required|string|max:255',
+            'shipping_email' => 'required|email|max:255',
+            'shipping_country' => 'required|string|max:255',
+            'shipping_city' => 'required|string|max:255',
+            'shipping_state' => 'required|string|max:255',
+            'shipping_address' => 'required|string|max:1000',
+            'shipping_zip_postal_code' => 'required|string|max:20',
+            'shipping_phone_number' => 'required|string|max:20',
+            'shipping_additional_information' => 'nullable|string|max:255',
+
+
+
+
+
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $employeeId = auth('sanctum')->user()->employee_id;
+        $companyId = auth('sanctum')->user()->company_id;
+
+
+        $latestPrescription = PrecriptionDetails::where('employee_id', $employeeId)->latest()->first();
+
+        if (!$latestPrescription) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No prescription found for this employee.'
+            ], 404);
+        }
+
+        $order = new Order();
+        $order->employee_id = $employeeId;
+        $order->company_id = $companyId;
+
+        $order->fill($request->only([
+            'blue_light_protection',
+            'order_type',
+            'lense_sizes',
+            'lense_use',
+            'product_details',
+            'lense_material',
+            'scratch_coating',
+            'lens_tint',
+            'lens_protection',
+            'payment_method',
+            'product_id',
+            'product_quantity',
+            'net_total',
+            'paid_ammount',
+            'frame_size',
+            'color'
+        ]));
+
+        $order->order_status = 'pending';
+        $order->order_confirmation_number = strtoupper(uniqid('CONF'));
+        $order->prescription_id = $latestPrescription->id;
+        $order->save();
+
+
+
+
+        $shipping = new ShippingAddress();
+        $shipping->fill([
+            'first_name' => $request->input('shipping_first_name'),
+            'last_name' => $request->input('shipping_last_name'),
+            'email' => $request->input('shipping_email'),
+            'country' => $request->input('shipping_country'),
+            'state' => $request->input('shipping_state'),
+            'city' => $request->input('shipping_city'),
+            'address' => $request->input('shipping_address'),
+            'zip_postal_code' => $request->input('shipping_zip_postal_code'),
+            'phone_number' => $request->input('shipping_phone_number'),
+            'additional_information' => $request->input('shipping_additional_information'),
+        ]);
+
+        $shipping->order_id = $order->id;
+        $shipping->save();
+
+
+        // Save Billing Address
+        $billing = new BillingAddress();
+        $billing->fill([
+            'first_name' => $request->input('billing_first_name'),
+            'last_name' => $request->input('billing_last_name'),
+            'email' => $request->input('billing_email'),
+            'country' => $request->input('billing_country'),
+            'state' => $request->input('billing_state'),
+            'city' => $request->input('billing_city'),
+            'address' => $request->input('billing_address'),
+            'zip_postal_code' => $request->input('billing_zip_postal_code'),
+            'phone_number' => $request->input('billing_phone_number'),
+        ]);
+
+        $billing->order_id = $order->id;
+        $billing->save();
+
+
+
+
+
+
+
+        // Employee benefit deduction
+        $employee = Employee::findOrFail($employeeId);
+        $employee->benefit_amount -= $request->net_total;
+        $employee->save();
+
+        Transaction::create([
+            'employee_id' => $employeeId,
+            'transaction_type' => 'debit',
+            'amount' => $request->net_total ?? '',
+            'balance' => $employee->benefit_amount ?? '',
+            'description' => 'order',
+        ]);
+
+
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Order placed using existing prescription.',
+            'order_confire'=>$order->order_confirmation_number,
+            'order_id' => $order->id,
+            'prescription_id' => $latestPrescription->id,
+        ]);
+    }
+
+
+    private function uploadImages($image, $directory = 'products')
+    {
+        $destinationPath = public_path("projectimages/{$directory}");
+
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0777, true);
+        }
+
+        $originalName = $image->getClientOriginalName();
+        $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+
+        $image->move($destinationPath, $fileName);
+
+        if (file_exists("$destinationPath/$fileName")) {
+            return "/projectimages/{$directory}/{$fileName}";
+        } else {
+            dd("Image move failed: $fileName");
         }
     }
 
+
+
+
+
+
+
+
     public function getEmployeeOrders(Request $request)
     {
-        try {
+        // try {
+        //     $orders = $this->getOrders($request, 'employee');
+        //     return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
+        //         'orders' => $orders,
+        //     ]);
+        // } catch (\Exception $e) {
+        //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
+        // }
 
-            $orders = $this->getOrders($request, 'employee');
 
-            return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
-                'orders' => $orders,
-            ]);
-        } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        }
+        $EmplyeeId= auth('sanctum')->user()->employee_id;
+
+
+        $orders = Order::where('employee_id',$EmplyeeId)
+            ->with('employee_data:employee_id,name as employee_name ,email')
+            ->with('company_data:company_id,name as company_name,email')
+            ->with('orderPoints:order_id,point')
+            ->with('prescription')
+            ->with('shipping_address')
+            ->with('billing_address')
+            ->get();
+
+
+        $orders->transform(function ($order) {
+            $order->order_points = $order->orderPoints->pluck('point')->toArray();
+            unset($order->orderPoints); // Optional: hide original relation
+            return $order;
+        });
+
+        return $orders;
+
+
     }
 
     public function getCompanyOrders(Request $request)
     {
-        try {
+        // try {
 
-            $orders = $this->getOrders($request, 'company');
+        //     $orders = $this->getOrders($request, 'company');
 
-            return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
-                'orders' => $orders,
-            ]);
-        } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        }
+        //     return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
+        //         'orders' => $orders,
+        //     ]);
+        // } catch (\Exception $e) {
+        //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
+        // }
+
+
+
+        $CompanyId= auth('sanctum')->user()->company_id;
+
+
+        $orders = Order::where('company_id',$CompanyId)
+            ->with('employee_data:employee_id,name as employee_name ,email')
+            ->with('company_data:company_id,name as company_name,email')
+            ->with('orderPoints:order_id,point')
+            ->with('prescription')
+            ->with('shipping_address')
+            ->with('billing_address')
+            ->get();
+
+
+        $orders->transform(function ($order) {
+            $order->order_points = $order->orderPoints->pluck('point')->toArray();
+            unset($order->orderPoints); // Optional: hide original relation
+            return $order;
+        });
+
+        return $orders;
+
+
+
+
+
+
+
+
+
     }
 
-    public function getAllOrders(Request $request)
+    public function getAllOrders(request $request)
     {
-        try {
+        //     // try {
 
-            $orders = $this->getOrders($request, '');
+        //     //     $orders = $this->getOrders($request, '');
 
-            return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
-                'orders' => $orders,
-            ]);
-        } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        }
+        //     //     return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
+        //     //         'orders' => $orders,
+        //     //     ]);
+        //     // } catch (\Exception $e) {
+        //     //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
+        //     // }
+
+        $orders = Order::with('employee_data:employee_id,name as employee_name ,email')
+            ->with('company_data:company_id,name as company_name,email')
+            ->with('orderPoints:order_id,point')
+            ->with('prescription')
+            ->with('shipping_address')
+            ->with('billing_address')
+            ->get();
+
+
+        $orders->transform(function ($order) {
+            $order->order_points = $order->orderPoints->pluck('point')->toArray();
+            unset($order->orderPoints); // Optional: hide original relation
+            return $order;
+        });
+
+
+        return $orders;
     }
+
+
+
 
     public function updateOrderStatus(Request $request)
     {
@@ -223,121 +708,120 @@ class OrderController extends Controller
 
 
     public function updateOrder(Request $request, $id)
-{
-    try {
-        $request->validate([
-            'order_type' => 'nullable|string',
-            'frame_type' => 'nullable|string',
-            'frame_prescription' => 'nullable|string',
-            'blue_light_protection' => 'nullable|string',
-            'frame_prescription_type' => 'nullable|string',
-            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'lense_sizes' => 'nullable|string',
-            'od_left_sphere' => 'nullable|string',
-            'od_left_cylinders' => 'nullable|string',
-            'od_left_axis' => 'nullable|string',
-            'od_left_nv_add' => 'nullable|string',
-            'od_left_2_pds' => 'nullable|string',
-            'od_right_sphere' => 'nullable|string',
-            'od_right_cylinders' => 'nullable|string',
-            'od_right_axis' => 'nullable|string',
-            'od_right_nv_add' => 'nullable|string',
-            'od_right_2_pds' => 'nullable|string',
-            'lense_use' => 'nullable|string',
-            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'product_details' => 'nullable|string',
-            'lense_material' => 'nullable|string',
-            'scratch_coating' => 'nullable|string',
-            'lens_tint' => 'nullable|string',
-            'lens_protection' => 'nullable|string',
-            'order_status' => 'nullable|string',
-            'update_points' => 'nullable|array'
-        ]);
+    {
+        try {
+            $request->validate([
+                'order_type' => 'nullable|string',
+                'frame_type' => 'nullable|string',
+                'frame_prescription' => 'nullable|string',
+                'blue_light_protection' => 'nullable|string',
+                'frame_prescription_type' => 'nullable|string',
+                'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'lense_sizes' => 'nullable|string',
+                'od_left_sphere' => 'nullable|string',
+                'od_left_cylinders' => 'nullable|string',
+                'od_left_axis' => 'nullable|string',
+                'od_left_nv_add' => 'nullable|string',
+                'od_left_2_pds' => 'nullable|string',
+                'od_right_sphere' => 'nullable|string',
+                'od_right_cylinders' => 'nullable|string',
+                'od_right_axis' => 'nullable|string',
+                'od_right_nv_add' => 'nullable|string',
+                'od_right_2_pds' => 'nullable|string',
+                'lense_use' => 'nullable|string',
+                'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'product_details' => 'nullable|string',
+                'lense_material' => 'nullable|string',
+                'scratch_coating' => 'nullable|string',
+                'lens_tint' => 'nullable|string',
+                'lens_protection' => 'nullable|string',
+                'order_status' => 'nullable|string',
+                'update_points' => 'nullable|array'
+            ]);
 
-        $order = Order::findOrFail($id);
+            $order = Order::findOrFail($id);
 
-        // Handle prescription image
-        $prescriptionImage = $order->prescription_image;
-        if ($request->hasFile('prescription_image')) {
-            $oldPrescriptionPath = public_path($order->prescription_image);
-            if ($order->prescription_image && file_exists($oldPrescriptionPath)) {
-                unlink($oldPrescriptionPath);
+            // Handle prescription image
+            $prescriptionImage = $order->prescription_image;
+            if ($request->hasFile('prescription_image')) {
+                $oldPrescriptionPath = public_path($order->prescription_image);
+                if ($order->prescription_image && file_exists($oldPrescriptionPath)) {
+                    unlink($oldPrescriptionPath);
+                }
+
+                $file = $request->file('prescription_image');
+                $originalName = $file->getClientOriginalName();
+                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+                $destinationPath = public_path('projectimages/orders/prescriptions');
+
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0777, true);
+                }
+                $file->move($destinationPath, $fileName);
+                $prescriptionImage = '/projectimages/orders/prescriptions/' . $fileName;
             }
 
-            $file = $request->file('prescription_image');
-            $originalName = $file->getClientOriginalName();
-            $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-            $destinationPath = public_path('projectimages/orders/prescriptions');
-
-            if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0777, true);
+            // Handle frame picture
+            $framePicture = $order->frame_picture;
+            if ($request->hasFile('frame_picture')) {
+                $oldFramePath = public_path($order->frame_picture);
+                if ($order->frame_picture && file_exists($oldFramePath)) {
+                    unlink($oldFramePath);
+                }
+                $file = $request->file('frame_picture');
+                $originalName = $file->getClientOriginalName();
+                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+                $destinationPath = public_path('projectimages/orders/frames');
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0777, true);
+                }
+                $file->move($destinationPath, $fileName);
+                $framePicture = '/projectimages/orders/frames/' . $fileName;
             }
-            $file->move($destinationPath, $fileName);
-            $prescriptionImage = '/projectimages/orders/prescriptions/' . $fileName;
+
+            // Update order fields only if present in request
+            $order->update([
+                'order_type' => $request->input('order_type', $order->order_type),
+                'frame_type' => $request->input('frame_type', $order->frame_type),
+                'frame_prescription' => $request->input('frame_prescription', $order->frame_prescription),
+                'blue_light_protection' => $request->input('blue_light_protection', $order->blue_light_protection),
+                'frame_prescription_type' => $request->input('frame_prescription_type', $order->frame_prescription_type),
+                'prescription_image' => $prescriptionImage,
+                'lense_sizes' => $request->input('lense_sizes', $order->lense_sizes),
+                'od_left_sphere' => $request->input('od_left_sphere', $order->od_left_sphere),
+                'od_left_cylinders' => $request->input('od_left_cylinders', $order->od_left_cylinders),
+                'od_left_axis' => $request->input('od_left_axis', $order->od_left_axis),
+                'od_left_nv_add' => $request->input('od_left_nv_add', $order->od_left_nv_add),
+                'od_left_2_pds' => $request->input('od_left_2_pds', $order->od_left_2_pds),
+                'od_right_sphere' => $request->input('od_right_sphere', $order->od_right_sphere),
+                'od_right_cylinders' => $request->input('od_right_cylinders', $order->od_right_cylinders),
+                'od_right_axis' => $request->input('od_right_axis', $order->od_right_axis),
+                'od_right_nv_add' => $request->input('od_right_nv_add', $order->od_right_nv_add),
+                'od_right_2_pds' => $request->input('od_right_2_pds', $order->od_right_2_pds),
+                'lense_use' => $request->input('lense_use', $order->lense_use),
+                'frame_picture' => $framePicture,
+                'product_details' => $request->input('product_details', $order->product_details),
+                'lense_material' => $request->input('lense_material', $order->lense_material),
+                'scratch_coating' => $request->input('scratch_coating', $order->scratch_coating),
+                'lens_tint' => $request->input('lens_tint', $order->lens_tint),
+                'lens_protection' => $request->input('lens_protection', $order->lens_protection),
+                'order_status' => $request->input('order_status', $order->order_status),
+            ]);
+
+            if ($request->has('update_points') && is_array($request->update_points)) {
+                foreach ($request->update_points as $point) {
+                    ChangesPoints::create([
+                        'order_id' => $order->id,
+                        'point' => $point
+                    ]);
+                }
+            }
+
+            return $this->successResponse(['model' => 'orders'], 'Order updated successfully', [
+                'order' => $order,
+            ]);
+        } catch (\Exception $e) {
+            return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
         }
-
-        // Handle frame picture
-        $framePicture = $order->frame_picture;
-        if ($request->hasFile('frame_picture')) {
-            $oldFramePath = public_path($order->frame_picture);
-            if ($order->frame_picture && file_exists($oldFramePath)) {
-                unlink($oldFramePath);
-            }
-            $file = $request->file('frame_picture');
-            $originalName = $file->getClientOriginalName();
-            $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-            $destinationPath = public_path('projectimages/orders/frames');
-            if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0777, true);
-            }
-            $file->move($destinationPath, $fileName);
-            $framePicture = '/projectimages/orders/frames/' . $fileName;
-        }
-
-        // Update order fields only if present in request
-        $order->update([
-            'order_type' => $request->input('order_type', $order->order_type),
-            'frame_type' => $request->input('frame_type', $order->frame_type),
-            'frame_prescription' => $request->input('frame_prescription', $order->frame_prescription),
-            'blue_light_protection' => $request->input('blue_light_protection', $order->blue_light_protection),
-            'frame_prescription_type' => $request->input('frame_prescription_type', $order->frame_prescription_type),
-            'prescription_image' => $prescriptionImage,
-            'lense_sizes' => $request->input('lense_sizes', $order->lense_sizes),
-            'od_left_sphere' => $request->input('od_left_sphere', $order->od_left_sphere),
-            'od_left_cylinders' => $request->input('od_left_cylinders', $order->od_left_cylinders),
-            'od_left_axis' => $request->input('od_left_axis', $order->od_left_axis),
-            'od_left_nv_add' => $request->input('od_left_nv_add', $order->od_left_nv_add),
-            'od_left_2_pds' => $request->input('od_left_2_pds', $order->od_left_2_pds),
-            'od_right_sphere' => $request->input('od_right_sphere', $order->od_right_sphere),
-            'od_right_cylinders' => $request->input('od_right_cylinders', $order->od_right_cylinders),
-            'od_right_axis' => $request->input('od_right_axis', $order->od_right_axis),
-            'od_right_nv_add' => $request->input('od_right_nv_add', $order->od_right_nv_add),
-            'od_right_2_pds' => $request->input('od_right_2_pds', $order->od_right_2_pds),
-            'lense_use' => $request->input('lense_use', $order->lense_use),
-            'frame_picture' => $framePicture,
-            'product_details' => $request->input('product_details', $order->product_details),
-            'lense_material' => $request->input('lense_material', $order->lense_material),
-            'scratch_coating' => $request->input('scratch_coating', $order->scratch_coating),
-            'lens_tint' => $request->input('lens_tint', $order->lens_tint),
-            'lens_protection' => $request->input('lens_protection', $order->lens_protection),
-            'order_status' => $request->input('order_status', $order->order_status),
-        ]);
-
-        if ($request->has('update_points') && is_array($request->update_points)) {
-            foreach ($request->update_points as $point) {
-                ChangesPoints::create([
-                    'order_id' => $order->id,
-                    'point' => $point
-                ]);
-            }
-        }
-
-        return $this->successResponse(['model' => 'orders'], 'Order updated successfully', [
-            'order' => $order,
-        ]);
-    } catch (\Exception $e) {
-        return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
     }
-}
-
 }
