@@ -75,9 +75,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
     Route::middleware('role:employee')->group(function () {
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
-        Route::post('create-order', [OrderController::class, 'storeOrder']);
+        // Route::post('create-order', [OrderController::class, 'storeOrder']);
+
+        Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
+        Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);
+        
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
-      
+        Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
+
+
         Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
         Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
     });
@@ -168,3 +174,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('delete/blue-light-protection/{id}', [lensManegmentController::class, 'deleteBlueLightProtection']); // single
     });
 });
+
