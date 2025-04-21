@@ -205,7 +205,7 @@ class ProductController extends Controller
                 $products = Product::with([
                     'images:id,product_id,image_path',
                     'productcategory:category_id,category_name',
-                    'productsubcate: id,category_id,subcategory_name',
+                    'productsubcate:id,category_id,subcategory_name',
                     'colors:color_id,color_name',
                     'frameSizes:frame_size_id,frame_size_name',
                     'rimtype:rim_type_id,rim_type_name',
@@ -1165,8 +1165,8 @@ class ProductController extends Controller
     {
 
 
-        if ($id == 4) {
-            return $this->errorResponse(['model' => 'shape'], 'This shape is hardcoded and cannot be deleted.', [], 403);
+        if ($id == 3) {
+            return $this->errorResponse(['model' => 'manufacturer'], 'This shape is manufacturer and cannot be deleted.', [], 403);
         }
 
 

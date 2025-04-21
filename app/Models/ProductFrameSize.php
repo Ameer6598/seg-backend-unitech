@@ -11,5 +11,7 @@ protected $table = 'product_frame_size';
 
 protected $guarded = [];
 
+public $timestamps = false; // Disable timestamps
+
 
 }

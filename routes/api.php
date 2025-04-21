@@ -86,8 +86,6 @@ Route::middleware('auth:sanctum')->group(function () {
         
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
         Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
-
-
         Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
         Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
     });

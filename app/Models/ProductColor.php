@@ -10,6 +10,8 @@ class ProductColor extends Model
 protected $table = 'product_colors';
 
 protected $guarded = [];
+public $timestamps = false; // Disable timestamps
+
 
 
 }
