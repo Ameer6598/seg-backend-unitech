@@ -29,7 +29,7 @@ class ProductsImport implements ToModel, WithHeadingRow
             'material' => 5,
             'shape' => 4,
             'eye_size' => $row['eye_size'],
-            'manufacturer_name' => $row['manufacturer_name'],
+            'manufacturer_name' => 3,
             'price' => $this->getSalePrice($row['price']),
             'purchase_price' => $this->getPurchasePrice($row['purchase_price']),
             'available_quantity' => $this->availabelQuantity($row['available_quantity']),

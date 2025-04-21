@@ -1163,6 +1163,13 @@ class ProductController extends Controller
 
     public function deleteManufacturer($id)
     {
+
+
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'shape'], 'This shape is hardcoded and cannot be deleted.', [], 403);
+        }
+
+
         DB::beginTransaction();
 
         try {
