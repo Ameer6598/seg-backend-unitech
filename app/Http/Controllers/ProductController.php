@@ -281,8 +281,9 @@ class ProductController extends Controller
             $products = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
-                'productcolor:color_id,color_name',
-                'framezie:frame_size_id,frame_size_name',
+                'productsubcate:id,category_id,subcategory_name',
+                'colors:color_id,color_name',
+                'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
                 'material:material_id,material_name',
                 'shape:shape_id,shape_name',
@@ -298,6 +299,18 @@ class ProductController extends Controller
                     $image->image_path = $mediaURL . $image->image_path;
                     return $image;
                 });
+
+                $product->colors->map(function ($color) {
+                    unset($color->pivot); // Remove the pivot attribute
+                    return $color;
+                });
+
+                $product->frameSizes->map(function ($frameSize) {
+                    unset($frameSize->pivot); // Remove the pivot attribute
+                    return $frameSize;
+                }); 
+
+
                 return $product;
             });
 
