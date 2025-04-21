@@ -78,6 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
     Route::middleware('role:employee')->group(function () {
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
+        Route::get('get-product-manufactures', [ProductController::class, 'getManufacturers']);
+        
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
         Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
         Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);

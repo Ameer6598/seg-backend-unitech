@@ -24,6 +24,12 @@ class Product extends Model
         return $this->hasOne(Category::class, 'category_id', 'category');
     }
 
+    public function productsubcate()
+    {
+        return $this->hasOne(ProductSubcategory::class, 'id', 'sub_category');
+    }
+
+
 
     public function colors()
     {

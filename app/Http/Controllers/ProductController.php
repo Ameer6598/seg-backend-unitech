@@ -102,8 +102,6 @@ class ProductController extends Controller
         }
     }
 
-
-
     public function update(Request $request)
     {
         try {
@@ -111,7 +109,7 @@ class ProductController extends Controller
                 'product_name' => 'required|string|max:255',
                 'description' => 'required|string',
                 'category' => 'required|numeric',
-                'sub_category' => 'nullable', 
+                'sub_category' => 'nullable',
                 'color' => 'required|array', // Array validation for colors
                 'color.*' => 'numeric', // Ensuring each color id is numeric
                 'frame_sizes' => 'required|array', // Array validation for frame_sizes
@@ -130,11 +128,11 @@ class ProductController extends Controller
                 'image_ids' => 'nullable|array',
                 'image_ids.*' => 'nullable|numeric',
             ]);
-    
+
             DB::beginTransaction();
-    
+
             $product = Product::findOrFail($request->product_id);
-    
+
             // Remove images based on the image_ids
             if ($request->has('image_ids')) {
                 foreach ($request->image_ids as $imageId) {
@@ -145,7 +143,7 @@ class ProductController extends Controller
                     }
                 }
             }
-    
+
             // Upload new images
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
@@ -156,21 +154,21 @@ class ProductController extends Controller
                     ]);
                 }
             }
-    
+
             // Update product fields
             $product->update($request->except('images', 'image_ids', 'color', 'frame_sizes')); // Exclude unnecessary fields
-    
+
             // Handle updating the many-to-many relationships for colors and frame sizes
             if ($request->has('color')) {
                 $product->colors()->sync($request->color); // Use sync to update the colors
             }
-    
+
             if ($request->has('frame_sizes')) {
                 $product->frameSizes()->sync($request->frame_sizes); // Use sync to update the frame sizes
             }
-    
+
             DB::commit();
-    
+
             return $this->successResponse(['model' => 'products'], 'Product updated successfully', [
                 'product' => $product,
             ]);
@@ -179,9 +177,6 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
-    
-
-
 
     public function getProductOrAll($productId = null)
     {
@@ -210,6 +205,7 @@ class ProductController extends Controller
                 $products = Product::with([
                     'images:id,product_id,image_path',
                     'productcategory:category_id,category_name',
+                    'productsubcate: id,category_id,subcategory_name',
                     'colors:color_id,color_name',
                     'frameSizes:frame_size_id,frame_size_name',
                     'rimtype:rim_type_id,rim_type_name',
@@ -330,11 +326,13 @@ class ProductController extends Controller
             $productsQuery = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
+                'productsubcate:id,category_id,subcategory_name',
                 'colors:color_id,color_name',
                 'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
                 'material:material_id,material_name',
                 'shape:shape_id,shape_name',
+
                 'style:style_id,style_name',
                 'manufacturer'
             ])
@@ -350,18 +348,24 @@ class ProductController extends Controller
             }
 
             if ($manufacturerName) {
-                $productsQuery->where('manufacturer_name', 'LIKE', "%$manufacturerName%");
+                $productsQuery->where('manufacturer_name', $manufacturerName);
                 $isFiltered = true;
             }
 
             if ($isFiltered) {
                 $products = $productsQuery->get();
-
-
                 $products->transform(function ($product) use ($mediaURL) {
                     $product->images->transform(function ($image) use ($mediaURL) {
                         $image->image_path = $mediaURL . $image->image_path;
                         return $image;
+                    });
+                    $product->colors->map(function ($color) {
+                        unset($color->pivot); // Remove the pivot attribute
+                        return $color;
+                    });
+                    $product->frameSizes->map(function ($frameSize) {
+                        unset($frameSize->pivot); // Remove the pivot attribute
+                        return $frameSize;
                     });
                     return $product;
                 });
@@ -372,11 +376,18 @@ class ProductController extends Controller
                         $image->image_path = $mediaURL . $image->image_path;
                         return $image;
                     });
+                    $product->colors->map(function ($color) {
+                        unset($color->pivot); // Remove the pivot attribute
+                        return $color;
+                    });
+
+                    $product->frameSizes->map(function ($frameSize) {
+                        unset($frameSize->pivot); // Remove the pivot attribute
+                        return $frameSize;
+                    });
                     return $product;
                 });
             }
-
-
 
 
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
@@ -386,6 +397,12 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
+
+
+
+    // public function getManufacturers(){
+
+    // }
 
     public function deleteProduct($productId)
     {
