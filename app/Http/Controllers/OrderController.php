@@ -164,8 +164,6 @@ class OrderController extends Controller
     public function newPresOrder(Request $request)
     {
 
-
-
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'required|string',
             'order_type' => 'required|string|max:255',
@@ -176,8 +174,6 @@ class OrderController extends Controller
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
             'lens_protection' => 'required|string|max:255',
-
-
             // Billing details
             'billing_first_name' => 'required|string|max:255',
             'billing_last_name' => 'required|string|max:255',
@@ -186,9 +182,9 @@ class OrderController extends Controller
             'billing_city' => 'required|string|max:255',
             'billing_state' => 'required|string|max:255',
             'billing_address' => 'required|string|max:1000',
+            'billing_second_address' => 'nullable|string|max:1000',
             'billing_zip_postal_code' => 'required|string|max:20',
             'billing_phone_number' => 'required|string|max:20',
-
             // Shipping details
             'shipping_first_name' => 'required|string|max:255',
             'shipping_last_name' => 'required|string|max:255',
@@ -197,12 +193,10 @@ class OrderController extends Controller
             'shipping_city' => 'required|string|max:255',
             'shipping_state' => 'required|string|max:255',
             'shipping_address' => 'required|string|max:1000',
+            'shipping_second_address' => 'nullable|string|max:1000',
             'shipping_zip_postal_code' => 'required|string|max:20',
             'shipping_phone_number' => 'required|string|max:20',
             'shipping_additional_information' => 'nullable|string|max:255',
-
-
-
             'payment_method' => 'required|string|max:100',
             'product_id' => 'required|integer',
 
@@ -310,6 +304,7 @@ class OrderController extends Controller
             'state' => $request->input('shipping_state'),
             'city' => $request->input('shipping_city'),
             'address' => $request->input('shipping_address'),
+            'second_address' => $request->input('shipping_second_address'),
             'zip_postal_code' => $request->input('shipping_zip_postal_code'),
             'phone_number' => $request->input('shipping_phone_number'),
             'additional_information' => $request->input('shipping_additional_information'),
@@ -329,6 +324,7 @@ class OrderController extends Controller
             'state' => $request->input('billing_state'),
             'city' => $request->input('billing_city'),
             'address' => $request->input('billing_address'),
+            'second_address' => $request->input('billing_second_address'),
             'zip_postal_code' => $request->input('billing_zip_postal_code'),
             'phone_number' => $request->input('billing_phone_number'),
         ]);
@@ -340,9 +336,14 @@ class OrderController extends Controller
 
         // Employee benefit deduction
         $employee = Employee::findOrFail($employeeId);
-        $employee->benefit_amount -= $request->net_total;
+        $deductionAmount = $request->net_total;
+        
+        if ($employee->benefit_amount < $deductionAmount) {
+            $deductionAmount = $employee->benefit_amount;
+        }
+        $employee->benefit_amount -= $deductionAmount;
         $employee->save();
-
+        
         Transaction::create([
             'employee_id' => $employeeId,
             'transaction_type' => 'debit',
@@ -361,6 +362,9 @@ class OrderController extends Controller
     }
 
 
+
+
+
     public function existingPresOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -373,14 +377,7 @@ class OrderController extends Controller
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
             'lens_protection' => 'required|string|max:255',
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'country' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'address' => 'required|string|max:1000',
-            'zip_postal_code' => 'required|string|max:20',
-            'phone_number' => 'required|string|max:20',
+           
             'payment_method' => 'required|string|max:100',
             'product_id' => 'required|integer',
             'color' => 'required|integer ',
@@ -389,11 +386,6 @@ class OrderController extends Controller
             'product_quantity' => 'required|integer|min:1',
             'net_total' => 'required|numeric|min:0',
             'paid_ammount' => 'nullable|numeric|min:0',
-
-
-
-
-
             // Billing details
             'billing_first_name' => 'required|string|max:255',
             'billing_last_name' => 'required|string|max:255',
@@ -402,6 +394,8 @@ class OrderController extends Controller
             'billing_city' => 'required|string|max:255',
             'billing_state' => 'required|string|max:255',
             'billing_address' => 'required|string|max:1000',
+            'billing_second_address' => 'nullable|string|max:1000',
+
             'billing_zip_postal_code' => 'required|string|max:20',
             'billing_phone_number' => 'required|string|max:20',
 
@@ -413,6 +407,8 @@ class OrderController extends Controller
             'shipping_city' => 'required|string|max:255',
             'shipping_state' => 'required|string|max:255',
             'shipping_address' => 'required|string|max:1000',
+            'shipping_second_address' => 'nullable|string|max:1000',
+
             'shipping_zip_postal_code' => 'required|string|max:20',
             'shipping_phone_number' => 'required|string|max:20',
             'shipping_additional_information' => 'nullable|string|max:255',
@@ -483,6 +479,7 @@ class OrderController extends Controller
             'state' => $request->input('shipping_state'),
             'city' => $request->input('shipping_city'),
             'address' => $request->input('shipping_address'),
+            'second_address' => $request->input('shipping_second_address'),
             'zip_postal_code' => $request->input('shipping_zip_postal_code'),
             'phone_number' => $request->input('shipping_phone_number'),
             'additional_information' => $request->input('shipping_additional_information'),
@@ -502,24 +499,23 @@ class OrderController extends Controller
             'state' => $request->input('billing_state'),
             'city' => $request->input('billing_city'),
             'address' => $request->input('billing_address'),
+            'second_address' => $request->input('shipping_second_address'),
+
             'zip_postal_code' => $request->input('billing_zip_postal_code'),
             'phone_number' => $request->input('billing_phone_number'),
         ]);
 
         $billing->order_id = $order->id;
         $billing->save();
-
-
-
-
-
-
-
         // Employee benefit deduction
         $employee = Employee::findOrFail($employeeId);
-        $employee->benefit_amount -= $request->net_total;
+        $deductionAmount = $request->net_total;
+        
+        if ($employee->benefit_amount < $deductionAmount) {
+            $deductionAmount = $employee->benefit_amount;
+        }
+        $employee->benefit_amount -= $deductionAmount;
         $employee->save();
-
         Transaction::create([
             'employee_id' => $employeeId,
             'transaction_type' => 'debit',
@@ -527,9 +523,6 @@ class OrderController extends Controller
             'balance' => $employee->benefit_amount ?? '',
             'description' => 'order',
         ]);
-
-
-
         return response()->json([
             'status' => true,
             'message' => 'Order placed using existing prescription.',
@@ -538,8 +531,6 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
-
-
     private function uploadImages($image, $directory = 'products')
     {
         $destinationPath = public_path("projectimages/{$directory}");
@@ -581,7 +572,6 @@ class OrderController extends Controller
 
         $EmplyeeId= auth('sanctum')->user()->employee_id;
 
-
         $orders = Order::where('employee_id',$EmplyeeId)
             ->with('employee_data:employee_id,name as employee_name ,email')
             ->with('company_data:company_id,name as company_name,email')
@@ -598,8 +588,11 @@ class OrderController extends Controller
             return $order;
         });
 
-        return $orders;
-
+        return response()->json([
+            'status' => true,
+            'message' => 'Orders fetched successfully',
+            'data' => $orders
+        ]);
 
     }
 
@@ -637,10 +630,11 @@ class OrderController extends Controller
             return $order;
         });
 
-        return $orders;
-
-
-
+        return response()->json([
+            'status' => true,
+            'message' => 'Orders fetched successfully',
+            'data' => $orders
+        ]);
 
 
 
@@ -662,7 +656,7 @@ class OrderController extends Controller
         //     //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
         //     // }
 
-        $orders = Order::with('employee_data:employee_id,name as employee_name ,email')
+        $orders = Order::with('employee_data:employee_id,name as employee_name,email')
             ->with('company_data:company_id,name as company_name,email')
             ->with('orderPoints:order_id,point')
             ->with('prescription')
@@ -678,7 +672,11 @@ class OrderController extends Controller
         });
 
 
-        return $orders;
+        return response()->json([
+            'status' => true,
+            'message' => 'Orders fetched successfully',
+            'data' => $orders
+        ]);
     }
 
 

@@ -24,14 +24,18 @@ class Product extends Model
         return $this->hasOne(Category::class, 'category_id', 'category');
     }
 
-    public function productcolor()
+
+    public function colors()
     {
-        return $this->hasOne(Color::class, 'color_id', 'color');
+        return $this->belongsToMany(Color::class, 'product_colors', 'product_id', 'color_id');
     }
-    public function framezie()
+
+    public function frameSizes()
     {
-        return $this->hasOne(FrameSize::class, 'frame_size_id', 'frame_sizes');
+        return $this->belongsToMany(FrameSize::class, 'product_frame_size', 'product_id', 'frame_size_id');
     }
+
+
     public function rimtype()
     {
         return $this->hasOne(RimType::class, 'rim_type_id', 'rim_type');
@@ -40,20 +44,16 @@ class Product extends Model
     {
         return $this->belongsTo(Material::class, 'material');
     }
-    
+
     public function shape()
     {
         return $this->belongsTo(Shape::class, 'shape');
     }
-    
+
     public function style()
     {
-
         return $this->hasOne(Style::class, 'style_id', 'style');
-      
     }
-
-
     public function manufacturer()
     {
         return $this->hasOne(Manufacturer::class, 'manufacturer_id', 'manufacturer_name');

@@ -18,34 +18,41 @@ class ProductsImport implements ToModel, WithHeadingRow
      */
     public function model(array $row)
     {
-        // Create the product record first and get the ID
+
         $product = Product::create([
             'product_name' => $row['product_name'],
             'description' => $row['description'],
-            'category' => $row['category'],
-            'color' => 4,
-            'frame_sizes' => $row['frame_sizes'],
+            'category' => 4,
             'gender' => $this->getGender($row['gender']),
-            'age_group' => $row['age_group'],
-            'rim_type' => $row['rim_type'],
-            'style' => $row['style'],
-            'material' => $row['material'],
-            'shape' => $row['shape'],
+            'rim_type' => 4,
+            'style' => 4,
+            'material' => 5,
+            'shape' => 4,
             'eye_size' => $row['eye_size'],
             'manufacturer_name' => $row['manufacturer_name'],
-            'price' => $row['price'],
-            'available_quantity' => $row['available_quantity'],
-            'status' => $this->getStatus($row['status']),
+            'price' => $this->getSalePrice($row['price']),
+            'purchase_price' => $this->getPurchasePrice($row['purchase_price']),
+            'available_quantity' => $this->availabelQuantity($row['available_quantity']),
             'product_status' => $this->getProductStatus($row['product_status']),
             'vto' => $row['vto'],
-            'brand_name' => $row['brand_name'],
-            'model_name' => $row['model_name'],
             'glasses_type' => $row['glasses_type'],
             'lens_size' => $row['lens_size'],
             'temple_size' => $row['temple_size'],
             'bridge_size' => $row['bridge_size'],
             'photo_config_name' => $row['photo_config_name'],
         ]);
+
+
+        \App\Models\ProductColor::create([
+            'product_id' => $product->product_id,
+            'color_id' => 4,
+        ]);
+
+        \App\Models\ProductFrameSize::create([
+            'product_id' => $product->product_id,
+            'frame_size_id' => 4,
+        ]);
+
 
         if (isset($row['images']) && !empty($row['images'])) {
             $images = explode(',', $row['images']);
@@ -68,9 +75,7 @@ class ProductsImport implements ToModel, WithHeadingRow
                 'created_at' => now(),
             ];
         })->toArray();
-
         DB::table('company_product_mapper')->insert($mappings);
-
         return $product;
     }
 
@@ -83,18 +88,24 @@ class ProductsImport implements ToModel, WithHeadingRow
         return 'Male';  // Default to 'Male' if the value is invalid
     }
 
-    private function getStatus($status)
+    private function getPurchasePrice($price)
     {
-        $status = strtolower($status);
-        if ($status == 'active') {
-            return 'Active';
-        }
-        return 'Inactive';  // Default to 'Inactive' if the value is invalid
+        return is_numeric($price) ? floatval($price) : 0;
     }
+    private function getSalePrice($price)
+    {
+        return is_numeric($price) ? floatval($price) : 0;
+    }
+    private function availabelQuantity($price)
+    {
+        return is_numeric($price) ? floatval($price) : 0;
+    }
+
+
+
 
     private function getProductStatus($status)
     {
         return ($status == 1) ? 1 : 0;  // Convert product_status to 1 or 0
     }
 }
-

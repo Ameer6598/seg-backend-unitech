@@ -20,6 +20,9 @@ Route::get('/users', function () {
 // Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Route::post('/ddd', [ProductController::class, 'upload'])->name('products.upload'); // here i am uploading products via excel shee
+
+
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', function (Request $request) {
@@ -76,7 +79,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:employee')->group(function () {
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
-
         Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
         Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);
         
@@ -95,6 +97,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/categories', [ProductController::class, 'getCategories']);
         Route::post('/categorie-update', [ProductController::class, 'updateCategory']);
         Route::delete('/categories/{id}', [ProductController::class, 'deleteCategory']);
+
+        // Subcategory Routes
+        Route::post('/subcategories', [ProductController::class, 'createSubcategory']);
+        Route::get('/subcategories', [ProductController::class, 'getSubcategories']);
+        Route::post('/subcategory-update', [ProductController::class, 'updateSubcategory']);
+        Route::delete('/subcategories/{id}', [ProductController::class, 'deleteSubcategory']);
+
+
+
 
         // Colors
         Route::post('/colors', [ProductController::class, 'createColor']);

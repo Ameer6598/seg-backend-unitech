@@ -18,6 +18,8 @@ class lensManegmentController extends Controller
     // lense material 
     public function get($id = null)
     {
+        $baseUrl = env('LOGO_URL');
+
         if ($id) {
             $material = LensMaterial::find($id);
 
@@ -28,18 +30,27 @@ class lensManegmentController extends Controller
                 ], 404);
             }
 
+            $material->image_url = $baseUrl . $material->image_url;
+
             return response()->json([
                 'status' => true,
                 'data' => $material,
             ]);
         }
+
         $materials = LensMaterial::all();
+
+        // Add base URL to each material's image
+        foreach ($materials as $material) {
+            $material->image_url = $baseUrl . $material->image_url;
+        }
 
         return response()->json([
             'status' => true,
             'data' => $materials,
         ]);
     }
+
 
     public function create(Request $request)
     {
@@ -88,7 +99,6 @@ class lensManegmentController extends Controller
             'status' => true,
             'data' => $data,
         ]);
-
     }
 
     public function update(Request $request, $id)
@@ -182,6 +192,8 @@ class lensManegmentController extends Controller
 
     public function getScratchCoating($id = null)
     {
+        $baseUrl = env('LOGO_URL');
+
         if ($id) {
             $coating = ScracthCoating::find($id);
 
@@ -192,6 +204,8 @@ class lensManegmentController extends Controller
                 ], 404);
             }
 
+            $coating->image_url = $baseUrl . $coating->image_url;
+
             return response()->json([
                 'status' => true,
                 'data' => $coating,
@@ -199,6 +213,10 @@ class lensManegmentController extends Controller
         }
 
         $coatings = ScracthCoating::all();
+
+        foreach ($coatings as $coating) {
+            $coating->image_url = $baseUrl . $coating->image_url;
+        }
 
         return response()->json([
             'status' => true,
@@ -346,6 +364,8 @@ class lensManegmentController extends Controller
 
     public function getLensTint($id = null)
     {
+        $baseUrl = env('LOGO_URL');
+
         if ($id) {
             $tint = LensTint::find($id);
 
@@ -356,6 +376,8 @@ class lensManegmentController extends Controller
                 ], 404);
             }
 
+            $tint->image_url = $baseUrl . $tint->image_url;
+
             return response()->json([
                 'status' => true,
                 'data' => $tint,
@@ -364,11 +386,16 @@ class lensManegmentController extends Controller
 
         $tints = LensTint::all();
 
+        foreach ($tints as $tint) {
+            $tint->image_url = $baseUrl . $tint->image_url;
+        }
+
         return response()->json([
             'status' => true,
             'data' => $tints,
         ]);
     }
+
 
     public function createLensTint(Request $request)
     {
@@ -505,6 +532,8 @@ class lensManegmentController extends Controller
     //lense prodection work
     public function getLensProtection($id = null)
     {
+        $baseUrl = env('LOGO_URL');
+
         if ($id) {
             $protection = LensProtection::find($id);
 
@@ -515,6 +544,8 @@ class lensManegmentController extends Controller
                 ], 404);
             }
 
+            $protection->image_url = $protection->image_url ? $baseUrl . $protection->image_url : null;
+
             return response()->json([
                 'status' => true,
                 'data' => $protection,
@@ -523,11 +554,16 @@ class lensManegmentController extends Controller
 
         $protections = LensProtection::all();
 
+        foreach ($protections as $protection) {
+            $protection->image_url = $protection->image_url ? $baseUrl . $protection->image_url : null;
+        }
+
         return response()->json([
             'status' => true,
             'data' => $protections,
         ]);
     }
+
 
     public function createLensProtection(Request $request)
     {
@@ -661,9 +697,11 @@ class lensManegmentController extends Controller
         ]);
     }
 
-    //blue light protection work 
+
     public function getBlueLightProtection($id = null)
     {
+        $baseUrl = env('LOGO_URL');
+
         if ($id) {
             $protection = BlueLightProtection::find($id);
 
@@ -674,6 +712,8 @@ class lensManegmentController extends Controller
                 ], 404);
             }
 
+            $protection->image_url = $protection->image_url ? $baseUrl . $protection->image_url : null;
+
             return response()->json([
                 'status' => true,
                 'data' => $protection,
@@ -682,11 +722,16 @@ class lensManegmentController extends Controller
 
         $protections = BlueLightProtection::all();
 
+        foreach ($protections as $protection) {
+            $protection->image_url = $protection->image_url ? $baseUrl . $protection->image_url : null;
+        }
+
         return response()->json([
             'status' => true,
             'data' => $protections,
         ]);
     }
+
 
 
     public function createBlueLightProtection(Request $request)
@@ -835,22 +880,22 @@ class lensManegmentController extends Controller
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
-    
+
         $coatings = ScracthCoating::all()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
-    
+
         $tints = LensTint::all()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
-    
+
         $lensProtections = LensProtection::all()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
-    
+
         $blueLightProtections = BlueLightProtection::all()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
@@ -867,11 +912,4 @@ class lensManegmentController extends Controller
             'blue_light_protections' => $blueLightProtections,
         ]);
     }
-    
-
-
-
-
-
-
 }

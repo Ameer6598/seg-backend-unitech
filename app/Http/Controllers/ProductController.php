@@ -18,9 +18,11 @@ use Illuminate\Http\Request;
 use App\Models\CompanyProduct;
 use App\Imports\ProductsImport;
 use App\Models\EmployeeProduct;
+use App\Models\ProductSubcategory;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -37,15 +39,21 @@ class ProductController extends Controller
                 'product_name' => 'required|string|max:255',
                 'description' => 'required|string',
                 'category' => 'required|numeric',
-                'color' => 'required|numeric',
-                'frame_sizes' => 'required|numeric',
+                'sub_category' => 'nullable',
+                'color' => 'required|array', // array will come of this 
+                'color.*' => 'numeric', // ensuring each color id in the array is numeric
+                'frame_sizes' => 'required|array', // array will come of this 
+                'frame_sizes.*' => 'numeric', // ensuring each frame size id in the array is numeric 
                 'gender' => 'required',
                 'rim_type' => 'required|numeric',
+                'style' => 'required|numeric',
+
                 'material' => 'required|numeric',
                 'manufacturer_name' => 'required|numeric',
                 'price' => 'required|numeric|min:0',
+                'purchase_price' => 'required|numeric|min:0',
                 'available_quantity' => 'required|integer|min:0',
-                'status' => 'required|numeric',
+                'product_status' => 'required|numeric',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
@@ -53,9 +61,7 @@ class ProductController extends Controller
 
             DB::beginTransaction();
 
-            $product = Product::create($request->except('images'));
-
-
+            $product = Product::create($request->except('images', 'color', 'frame_sizes'));
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $imagePath = $this->uploadImages($image, 'products'); // Uploading function ko call karna
@@ -65,6 +71,16 @@ class ProductController extends Controller
                     ]);
                 }
             }
+            if ($request->has('color')) {
+                $product->colors()->attach($request->color);
+            }
+
+            if ($request->has('frame_sizes')) {
+                $product->frameSizes()->attach($request->frame_sizes);
+            }
+
+
+
             $companies = DB::table('companies')->select('id')->get();
             $mappings = $companies->map(function ($company) use ($product) {
                 return [
@@ -95,29 +111,31 @@ class ProductController extends Controller
                 'product_name' => 'required|string|max:255',
                 'description' => 'required|string',
                 'category' => 'required|numeric',
-                'color' => 'required|numeric',
-                'frame_sizes' => 'required|numeric',
+                'sub_category' => 'nullable', 
+                'color' => 'required|array', // Array validation for colors
+                'color.*' => 'numeric', // Ensuring each color id is numeric
+                'frame_sizes' => 'required|array', // Array validation for frame_sizes
+                'frame_sizes.*' => 'numeric', // Ensuring each frame size id is numeric
                 'gender' => 'required',
                 'rim_type' => 'required|numeric',
+                'style' => 'required|numeric',
                 'material' => 'required|numeric',
                 'manufacturer_name' => 'required|numeric',
                 'price' => 'required|numeric|min:0',
+                'purchase_price' => 'required|numeric|min:0',
                 'available_quantity' => 'required|integer|min:0',
-                'status' => 'required|numeric',
+                'product_status' => 'required|numeric',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'product_id' => 'required',
-                'image_ids' => 'nullable|array', // Array of image IDs to delete
-                'image_ids.*' => 'nullable|numeric', // Individual image IDs to delete
+                'image_ids' => 'nullable|array',
+                'image_ids.*' => 'nullable|numeric',
             ]);
-
-
-
-
+    
             DB::beginTransaction();
-
+    
             $product = Product::findOrFail($request->product_id);
-
-            // Delete images provided in the request
+    
+            // Remove images based on the image_ids
             if ($request->has('image_ids')) {
                 foreach ($request->image_ids as $imageId) {
                     $image = ProductImage::find($imageId);
@@ -127,25 +145,32 @@ class ProductController extends Controller
                     }
                 }
             }
-
-            // Images ko separately save karna
+    
+            // Upload new images
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
-                    $imagePath = $this->uploadImages($image, 'products'); // Uploading function ko call karna
+                    $imagePath = $this->uploadImages($image, 'products'); // Upload the image
                     ProductImage::create([
-                        'product_id' => $product->product_id, // Yahan `product_id` set karein
-                        'image_path' => $imagePath,   // Image ka path store karein
+                        'product_id' => $product->product_id,
+                        'image_path' => $imagePath,
                     ]);
                 }
             }
-
-            // Update the product with new data (excluding images and image IDs)
-            $product->update(array_merge(
-                $request->except('images', 'image_ids'), // Exclude images and image_ids from update
-            ));
-
+    
+            // Update product fields
+            $product->update($request->except('images', 'image_ids', 'color', 'frame_sizes')); // Exclude unnecessary fields
+    
+            // Handle updating the many-to-many relationships for colors and frame sizes
+            if ($request->has('color')) {
+                $product->colors()->sync($request->color); // Use sync to update the colors
+            }
+    
+            if ($request->has('frame_sizes')) {
+                $product->frameSizes()->sync($request->frame_sizes); // Use sync to update the frame sizes
+            }
+    
             DB::commit();
-
+    
             return $this->successResponse(['model' => 'products'], 'Product updated successfully', [
                 'product' => $product,
             ]);
@@ -154,7 +179,7 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
-
+    
 
 
 
@@ -185,8 +210,8 @@ class ProductController extends Controller
                 $products = Product::with([
                     'images:id,product_id,image_path',
                     'productcategory:category_id,category_name',
-                    'productcolor:color_id,color_name',
-                    'framezie:frame_size_id,frame_size_name',
+                    'colors:color_id,color_name',
+                    'frameSizes:frame_size_id,frame_size_name',
                     'rimtype:rim_type_id,rim_type_name',
                     'material:material_id,material_name',
                     'shape:shape_id,shape_name',
@@ -203,6 +228,19 @@ class ProductController extends Controller
                         $image->image_path = $mediaURL . $image->image_path;
                         return $image;
                     });
+
+                    // Remove pivot from colors and frame sizes
+                    $product->colors->map(function ($color) {
+                        unset($color->pivot); // Remove the pivot attribute
+                        return $color;
+                    });
+
+                    $product->frameSizes->map(function ($frameSize) {
+                        unset($frameSize->pivot); // Remove the pivot attribute
+                        return $frameSize;
+                    });
+
+
                     return $product;
                 });
                 return $this->successResponse(['model' => 'products'], 'All products retrieved successfully', [
@@ -242,7 +280,7 @@ class ProductController extends Controller
             $productIds = CompanyProduct::where('company_id', $companyId)
                 ->pluck('product_id'); // Just get array of product IDs
 
-                $mediaURL = env('BASE_URL');
+            $mediaURL = env('BASE_URL');
 
             $products = Product::with([
                 'images:id,product_id,image_path',
@@ -259,13 +297,13 @@ class ProductController extends Controller
                 ->get();
 
 
-                $products->map(function ($product) use ($mediaURL) {
-                    $product->images->map(function ($image) use ($mediaURL) {
-                        $image->image_path = $mediaURL . $image->image_path;
-                        return $image;
-                    });
-                    return $product;
+            $products->map(function ($product) use ($mediaURL) {
+                $product->images->map(function ($image) use ($mediaURL) {
+                    $image->image_path = $mediaURL . $image->image_path;
+                    return $image;
                 });
+                return $product;
+            });
 
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
                 'products' => $products,
@@ -276,48 +314,78 @@ class ProductController extends Controller
     }
 
     public function getemployeeProducts(Request $request)
-{
-    try {
-        $employeeId = auth('sanctum')->user()->employee_id;
-        $page = $request->input('page', 1);
-        $perPage = $request->input('per_page', 10);
-        $productIds = EmployeeProduct::where('employee_id', $employeeId)
-            ->pluck('product_id');
+    {
+        try {
+            $employeeId = auth('sanctum')->user()->employee_id;
+            $page = $request->input('page', 1);
+            $perPage = $request->input('per_page', 10);
 
-        $mediaURL = env('BASE_URL');
+            $productName = $request->input('product_name');
+            $manufacturerName = $request->input('manufacturer_name');
 
-        // Fetch paginated products
-        $products = Product::with([
+            $productIds = EmployeeProduct::where('employee_id', $employeeId)
+                ->pluck('product_id');
+
+            $mediaURL = env('BASE_URL');
+            $productsQuery = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
-                'productcolor:color_id,color_name',
-                'framezie:frame_size_id,frame_size_name',
+                'colors:color_id,color_name',
+                'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
                 'material:material_id,material_name',
                 'shape:shape_id,shape_name',
                 'style:style_id,style_name',
                 'manufacturer'
             ])
-            ->where('product_status', 1)
-            ->whereIn('product_id', $productIds)
-            ->paginate($perPage, ['*'], 'page', $page);
+                ->where('product_status', 1)
+                ->whereIn('product_id', $productIds);
 
-        // Update image paths
-        $products->getCollection()->transform(function ($product) use ($mediaURL) {
-            $product->images->transform(function ($image) use ($mediaURL) {
-                $image->image_path = $mediaURL . $image->image_path;
-                return $image;
-            });
-            return $product;
-        });
 
-        return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
-            'products' => $products,
-        ]);
-    } catch (\Exception $e) {
-        return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
+            $isFiltered = false;
+
+            if ($productName) {
+                $productsQuery->where('product_name', 'LIKE', "%$productName%");
+                $isFiltered = true;
+            }
+
+            if ($manufacturerName) {
+                $productsQuery->where('manufacturer_name', 'LIKE', "%$manufacturerName%");
+                $isFiltered = true;
+            }
+
+            if ($isFiltered) {
+                $products = $productsQuery->get();
+
+
+                $products->transform(function ($product) use ($mediaURL) {
+                    $product->images->transform(function ($image) use ($mediaURL) {
+                        $image->image_path = $mediaURL . $image->image_path;
+                        return $image;
+                    });
+                    return $product;
+                });
+            } else {
+                $products = $productsQuery->paginate($perPage, ['*'], 'page', $page);
+                $products->getCollection()->transform(function ($product) use ($mediaURL) {
+                    $product->images->transform(function ($image) use ($mediaURL) {
+                        $image->image_path = $mediaURL . $image->image_path;
+                        return $image;
+                    });
+                    return $product;
+                });
+            }
+
+
+
+
+            return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
+                'products' => $products,
+            ]);
+        } catch (\Exception $e) {
+            return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
+        }
     }
-}
 
     public function deleteProduct($productId)
     {
@@ -368,6 +436,7 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'category'], $e->getMessage(), [], 422);
         }
     }
+
     public function updateCategory(Request $request)
     {
         $data = $request->validate([
@@ -392,8 +461,15 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'category'], $e->getMessage(), [], 422);
         }
     }
+
+
+
     public function deleteCategory($id)
     {
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'category'], 'This category is hardcoded and cannot be deleted.', [], 403);
+        }
+
         DB::beginTransaction();
 
         try {
@@ -406,6 +482,117 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(['model' => 'category'], $e->getMessage(), [], 422);
+        }
+    }
+
+
+    public function createSubcategory(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required',
+            'subcategory_name' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse(
+                ['model' => 'subcategory'],
+                'Validation error',
+                $validator->errors(),
+                422
+            );
+        }
+
+        try {
+            DB::beginTransaction();
+            $subcategory = ProductSubcategory::create($validator->validated());
+            DB::commit();
+
+            return $this->successResponse(
+                ['model' => 'subcategory'],
+                'Subcategory created successfully',
+                ['subcategory' => $subcategory]
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(
+                ['model' => 'subcategory'],
+                $e->getMessage(),
+                [],
+                422
+            );
+        }
+    }
+
+    public function getSubcategories()
+    {
+        return $this->successResponse(['model' => 'subcategories'], 'Subcategories fetched successfully', [
+            'Subcategories' => ProductSubcategory::all(),
+        ]);
+    }
+
+
+    public function updateSubcategory(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+            'subcategory_name' => 'required|string|max:255',
+            'category_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse(
+                ['model' => 'subcategory'],
+                'Validation error',
+                $validator->errors(),
+                422
+            );
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $data = $validator->validated();
+
+            $subcategory = ProductSubcategory::findOrFail($data['id']);
+            $subcategory->update([
+                'subcategory_name' => $data['subcategory_name'],
+                'category_id' => $data['category_id'],
+            ]);
+
+            DB::commit();
+
+            return $this->successResponse(
+                ['model' => 'subcategory'],
+                'Subcategory updated successfully',
+                ['subcategory' => $subcategory]
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return $this->errorResponse(
+                ['model' => 'subcategory'],
+                $e->getMessage(),
+                [],
+                422
+            );
+        }
+    }
+
+
+    public function deleteSubcategory($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $subcategory = ProductSubcategory::findOrFail($id);
+            $subcategory->delete();
+
+            DB::commit();
+
+            return $this->successResponse(['model' => 'subcategory'], 'Subcategory deleted successfully', []);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'subcategory'], $e->getMessage(), [], 422);
         }
     }
 
@@ -548,8 +735,13 @@ class ProductController extends Controller
 
     public function deleteFrameSize($id)
     {
-        DB::beginTransaction();
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'framesize'], 'This framesize is hardcoded and cannot be deleted.', [], 403);
+        }
 
+
+
+        DB::beginTransaction();
         try {
             $frameSize = FrameSize::findOrFail($id);
             $frameSize->delete();
@@ -621,8 +813,12 @@ class ProductController extends Controller
 
     public function deleteRimType($id)
     {
-        DB::beginTransaction();
 
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'rimtype'], 'This rimtype is hardcoded and cannot be deleted.', [], 403);
+        }
+
+        DB::beginTransaction();
         try {
             $rimType = RimType::findOrFail($id);
             $rimType->delete();
@@ -693,6 +889,11 @@ class ProductController extends Controller
 
     public function deleteStyle($id)
     {
+
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'style'], 'This style is hardcoded and cannot be deleted.', [], 403);
+        }
+
         DB::beginTransaction();
 
         try {
@@ -769,6 +970,12 @@ class ProductController extends Controller
 
     public function deleteMaterial($id)
     {
+
+        if ($id == 5) {
+            return $this->errorResponse(['model' => 'material'], 'This material is hardcoded and cannot be deleted.', [], 403);
+        }
+
+
         DB::beginTransaction();
 
         try {
@@ -844,6 +1051,13 @@ class ProductController extends Controller
 
     public function deleteShape($id)
     {
+
+
+        if ($id == 4) {
+            return $this->errorResponse(['model' => 'shape'], 'This shape is hardcoded and cannot be deleted.', [], 403);
+        }
+
+
         DB::beginTransaction();
 
         try {
@@ -979,20 +1193,19 @@ class ProductController extends Controller
 
     public function upload(Request $request)
     {
-
-        // return $request;
-
-        $request->validate([
-            'file' => 'required|mimes:csv,txt'
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:csv,txt',
         ]);
 
-        // dd($request->file('file'));
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
-
-        // Import the CSV file
         Excel::import(new ProductsImport, $request->file('file'));
 
-        // Return a JSON response indicating success
         return response()->json([
             'success' => true,
             'message' => 'Data imported successfully.',
