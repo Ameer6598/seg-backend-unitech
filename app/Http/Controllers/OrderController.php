@@ -662,6 +662,14 @@ class OrderController extends Controller
             ->with('prescription')
             ->with('shipping_address')
             ->with('billing_address')
+            ->with('blue_light_protection:id,title')
+            ->with('lense_material:id,title')
+            ->with('scratch_coating:id,title')
+            ->with('lens_tint:id,title')
+            ->with('lens_protection:id,title')
+            ->with('color:color_id,color_name')
+            ->with('frame_size:frame_size_id,frame_size_name')
+            ->with('product')
             ->get();
 
 
