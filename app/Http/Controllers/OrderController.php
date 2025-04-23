@@ -551,40 +551,34 @@ class OrderController extends Controller
         }
     }
 
-
-
-
-
-
-
-
     public function getEmployeeOrders(Request $request)
     {
-        // try {
-        //     $orders = $this->getOrders($request, 'employee');
-        //     return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
-        //         'orders' => $orders,
-        //     ]);
-        // } catch (\Exception $e) {
-        //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        // }
-
 
         $EmplyeeId= auth('sanctum')->user()->employee_id;
 
         $orders = Order::where('employee_id',$EmplyeeId)
-            ->with('employee_data:employee_id,name as employee_name ,email')
-            ->with('company_data:company_id,name as company_name,email')
-            ->with('orderPoints:order_id,point')
-            ->with('prescription')
-            ->with('shipping_address')
-            ->with('billing_address')
-            ->get();
+        ->with('employee_data:employee_id,name as employee_name,email')
+        ->with('company_data:company_id,name as company_name,email')
+        ->with('orderPoints:order_id,point')
+        ->with('prescription')
+        ->with('shipping_address')
+        ->with('billing_address')
+        ->with('blue_light_protection:id,title')
+        ->with('lense_material:id,title')
+        ->with('scratch_coating:id,title')
+        ->with('lens_tint:id,title')
+        ->with('lens_protection:id,title')
+        ->with('color:color_id,color_name')
+        ->with('frame_size:frame_size_id,frame_size_name')
+        ->with('product:product_id,product_name')
+        ->get();
 
 
         $orders->transform(function ($order) {
             $order->order_points = $order->orderPoints->pluck('point')->toArray();
             unset($order->orderPoints); // Optional: hide original relation
+            unset($order->product_id);
+
             return $order;
         });
 
@@ -598,35 +592,31 @@ class OrderController extends Controller
 
     public function getCompanyOrders(Request $request)
     {
-        // try {
-
-        //     $orders = $this->getOrders($request, 'company');
-
-        //     return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
-        //         'orders' => $orders,
-        //     ]);
-        // } catch (\Exception $e) {
-        //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        // }
-
-
 
         $CompanyId= auth('sanctum')->user()->company_id;
 
-
         $orders = Order::where('company_id',$CompanyId)
-            ->with('employee_data:employee_id,name as employee_name ,email')
+            ->with('employee_data:employee_id,name as employee_name,email')
             ->with('company_data:company_id,name as company_name,email')
             ->with('orderPoints:order_id,point')
             ->with('prescription')
             ->with('shipping_address')
             ->with('billing_address')
+            ->with('blue_light_protection:id,title')
+            ->with('lense_material:id,title')
+            ->with('scratch_coating:id,title')
+            ->with('lens_tint:id,title')
+            ->with('lens_protection:id,title')
+            ->with('color:color_id,color_name')
+            ->with('frame_size:frame_size_id,frame_size_name')
+            ->with('product:product_id,product_name')
             ->get();
 
 
         $orders->transform(function ($order) {
             $order->order_points = $order->orderPoints->pluck('point')->toArray();
             unset($order->orderPoints); // Optional: hide original relation
+            unset($order->product_id);
             return $order;
         });
 
@@ -645,16 +635,6 @@ class OrderController extends Controller
 
     public function getAllOrders(request $request)
     {
-        //     // try {
-
-        //     //     $orders = $this->getOrders($request, '');
-
-        //     //     return $this->successResponse(array('model' => 'orders'), 'Order fetch successfully', [
-        //     //         'orders' => $orders,
-        //     //     ]);
-        //     // } catch (\Exception $e) {
-        //     //     return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        //     // }
 
         $orders = Order::with('employee_data:employee_id,name as employee_name,email')
             ->with('company_data:company_id,name as company_name,email')
@@ -669,13 +649,14 @@ class OrderController extends Controller
             ->with('lens_protection:id,title')
             ->with('color:color_id,color_name')
             ->with('frame_size:frame_size_id,frame_size_name')
-            ->with('product')
+            ->with('product:product_id,product_name')
             ->get();
 
 
         $orders->transform(function ($order) {
             $order->order_points = $order->orderPoints->pluck('point')->toArray();
             unset($order->orderPoints); // Optional: hide original relation
+            unset($order->product_id);
             return $order;
         });
 
@@ -686,9 +667,6 @@ class OrderController extends Controller
             'data' => $orders
         ]);
     }
-
-
-
 
     public function updateOrderStatus(Request $request)
     {

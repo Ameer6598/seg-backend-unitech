@@ -17,10 +17,8 @@ Route::get('/users', function () {
 });
 
 
-// Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Route::post('/ddd', [ProductController::class, 'upload'])->name('products.upload'); // here i am uploading products via excel shee
 
 
 Route::middleware('auth:sanctum')->group(function () {
