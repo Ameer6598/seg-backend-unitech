@@ -1,0 +1,32 @@
+# !.env.example
+# /public/storage
+# /storage/oauth-private.key
+# /storage/oauth-public.key
+# /vendor/
+# .env
+
+
+
+# Laravel default .gitignore
+
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+/.env
+/.env.backup
+/.env.local
+/.env.testing
+/.env.production
+/.idea
+/.vscode
+/.phpunit.result.cache
+/.DS_Store
+Thumbs.db
+
+
+
+
+
+
