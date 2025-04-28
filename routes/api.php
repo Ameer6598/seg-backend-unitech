@@ -21,6 +21,8 @@ Route::get('/users', function () {
 
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::post('set/newpassword',[AuthController::class,'set']);
+
 Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
 Route::post('/check-payment-status', [StripeController::class, 'checkPaymentStatus']);
 
@@ -34,10 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:owner')->group(function () {
 
 
-        // web.php
         Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
         Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemploye']);
-
         Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonate']);
 
 
