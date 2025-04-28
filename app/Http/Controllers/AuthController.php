@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
-use App\Models\Employee;
 use App\Models\User;
 use App\Models\Order;
+use App\Models\Company;
+use App\Models\Employee;
+use App\Traits\ApiResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use App\Traits\ApiResponse;
-
-use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -92,6 +93,42 @@ class AuthController extends Controller
             'UserData' => $filteredUserData,
         ]);
     }
+
+    public function set(Request $request)
+    {
+
+        try {
+
+            DB::beginTransaction(); // Shuruat mein transaction le lo
+            $request->validate([
+                'id' => 'required|integer',
+                'verification_number' => 'required|string',
+                'password' => 'required|string',
+            ]);
+
+
+            $user = User::find($request->id);
+
+            if (!$user) {
+                return $this->errorResponse(['model' => 'user'], 'User not found', [], 404);
+            }
+    
+            if ($user->verification_number !== $request->verification_number) {
+                return $this->errorResponse(['model' => 'user'], 'Verification number does not match', [], 422);
+            }
+    
+            $user->password = Hash::make($request->password); 
+            $user->save();
+    
+            DB::commit(); 
+            return $this->successResponse(['model' => 'user'], 'Password updated successfully.', [], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'user'], $e->getMessage(), [], 422);
+        }
+    }
+
 
 
 

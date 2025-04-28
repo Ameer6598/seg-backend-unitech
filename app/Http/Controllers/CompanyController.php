@@ -93,7 +93,7 @@ class CompanyController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
-            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
+            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422); 
         }
     }
 
