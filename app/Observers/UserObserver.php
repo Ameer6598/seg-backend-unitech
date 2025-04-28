@@ -13,7 +13,7 @@ class UserObserver
      */
     public function created(User $user): void
     {
-        $verificationLink = url('https://safteyguard.vercel.app/orders/' . $user->id . '/' . $user->verification_number);
+        $verificationLink = url('https://app.safetyeyeguard.com/new-password/' . $user->id . '/' . $user->verification_number);
 
             Mail::to($user->email)->queue(new SendMailToNewUser([
                 'id' => $user->id,
