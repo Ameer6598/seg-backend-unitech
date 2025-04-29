@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Order;
 use App\Traits\Common;
 use App\Models\Employee;
@@ -13,6 +14,9 @@ use App\Models\BillingAddress;
 use App\Models\ShippingAddress;
 use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
+use App\Mail\OrderConfirmationMail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
@@ -337,13 +341,14 @@ class OrderController extends Controller
         // Employee benefit deduction
         $employee = Employee::findOrFail($employeeId);
         $deductionAmount = $request->net_total;
-        
+
         if ($employee->benefit_amount < $deductionAmount) {
             $deductionAmount = $employee->benefit_amount;
         }
         $employee->benefit_amount -= $deductionAmount;
         $employee->save();
-        
+
+
         Transaction::create([
             'employee_id' => $employeeId,
             'transaction_type' => 'debit',
@@ -352,10 +357,16 @@ class OrderController extends Controller
             'description' => 'order',
         ]);
 
+        $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+        try {
+            Mail::to($user->email)->send(new OrderConfirmationMail($order));
+        } catch (\Exception $e) {
+            Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+        }
         return response()->json([
             'status' => true,
             'message' => 'Order and prescription details saved successfully.',
-            'order_confire'=>$order->order_confirmation_number,
+            'order_confire' => $order->order_confirmation_number,
             'order_id' => $order->id,
             'prescription_id' => $pres->id,
         ]);
@@ -377,7 +388,7 @@ class OrderController extends Controller
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
             'lens_protection' => 'required|string|max:255',
-           
+
             'payment_method' => 'required|string|max:100',
             'product_id' => 'required|integer',
             'color' => 'required|integer ',
@@ -510,7 +521,7 @@ class OrderController extends Controller
         // Employee benefit deduction
         $employee = Employee::findOrFail($employeeId);
         $deductionAmount = $request->net_total;
-        
+
         if ($employee->benefit_amount < $deductionAmount) {
             $deductionAmount = $employee->benefit_amount;
         }
@@ -523,10 +534,20 @@ class OrderController extends Controller
             'balance' => $employee->benefit_amount ?? '',
             'description' => 'order',
         ]);
+
+        
+        $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+        try {
+            Mail::to($user->email)->send(new OrderConfirmationMail($order));
+        } catch (\Exception $e) {
+            Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+        }
+
+
         return response()->json([
             'status' => true,
             'message' => 'Order placed using existing prescription.',
-            'order_confire'=>$order->order_confirmation_number,
+            'order_confire' => $order->order_confirmation_number,
             'order_id' => $order->id,
             'prescription_id' => $latestPrescription->id,
         ]);
@@ -554,24 +575,24 @@ class OrderController extends Controller
     public function getEmployeeOrders(Request $request)
     {
 
-        $EmplyeeId= auth('sanctum')->user()->employee_id;
+        $EmplyeeId = auth('sanctum')->user()->employee_id;
 
-        $orders = Order::where('employee_id',$EmplyeeId)
-        ->with('employee_data:employee_id,name as employee_name,email')
-        ->with('company_data:company_id,name as company_name,email')
-        ->with('orderPoints:order_id,point')
-        ->with('prescription')
-        ->with('shipping_address')
-        ->with('billing_address')
-        ->with('blue_light_protection:id,title')
-        ->with('lense_material:id,title')
-        ->with('scratch_coating:id,title')
-        ->with('lens_tint:id,title')
-        ->with('lens_protection:id,title')
-        ->with('color:color_id,color_name')
-        ->with('frame_size:frame_size_id,frame_size_name')
-        ->with('product:product_id,product_name')
-        ->get();
+        $orders = Order::where('employee_id', $EmplyeeId)
+            ->with('employee_data:employee_id,name as employee_name,email')
+            ->with('company_data:company_id,name as company_name,email')
+            ->with('orderPoints:order_id,point')
+            ->with('prescription')
+            ->with('shipping_address')
+            ->with('billing_address')
+            ->with('blue_light_protection:id,title')
+            ->with('lense_material:id,title')
+            ->with('scratch_coating:id,title')
+            ->with('lens_tint:id,title')
+            ->with('lens_protection:id,title')
+            ->with('color:color_id,color_name')
+            ->with('frame_size:frame_size_id,frame_size_name')
+            ->with('product:product_id,product_name')
+            ->get();
 
 
         $orders->transform(function ($order) {
@@ -587,15 +608,14 @@ class OrderController extends Controller
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
-
     }
 
     public function getCompanyOrders(Request $request)
     {
 
-        $CompanyId= auth('sanctum')->user()->company_id;
+        $CompanyId = auth('sanctum')->user()->company_id;
 
-        $orders = Order::where('company_id',$CompanyId)
+        $orders = Order::where('company_id', $CompanyId)
             ->with('employee_data:employee_id,name as employee_name,email')
             ->with('company_data:company_id,name as company_name,email')
             ->with('orderPoints:order_id,point')
@@ -625,12 +645,6 @@ class OrderController extends Controller
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
-
-
-
-
-
-
     }
 
     public function getAllOrders(request $request)
