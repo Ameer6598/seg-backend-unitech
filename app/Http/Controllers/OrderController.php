@@ -16,6 +16,7 @@ use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
 use App\Mail\OrderConfirmationMail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
@@ -25,145 +26,6 @@ class OrderController extends Controller
     use ApiResponse;
     use Common;
 
-
-    // public function storeOrder(Request $request)
-    // {
-    //     try {
-    //         $request->validate([
-    //             'order_type' => 'required|string',
-    //             'frame_type' => 'required|string',
-    //             'frame_prescription' => 'required|string',
-    //             'frame_prescription_type' => 'required|string',
-    //             'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-    //             'lense_sizes' => 'required|string',
-    //             'od_left_sphere' => 'nullable|string',
-    //             'blue_light_protection' => 'nullable|string',
-    //             'od_left_cylinders' => 'nullable|string',
-    //             'od_left_axis' => 'nullable|string',
-    //             'od_left_nv_add' => 'nullable|string',
-    //             'od_left_2_pds' => 'nullable|string',
-    //             'od_right_sphere' => 'nullable|string',
-    //             'od_right_cylinders' => 'nullable|string',
-    //             'od_right_axis' => 'nullable|string',
-    //             'od_right_nv_add' => 'nullable|string',
-    //             'od_right_2_pds' => 'nullable|string',
-    //             'lense_use' => 'required|string',
-    //             'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-    //             'product_details' => 'required|string',
-    //             'lense_material' => 'required|string',
-    //             'scratch_coating' => 'required|string',
-    //             'lens_tint' => 'required|string',
-    //             'lens_protection' => 'required|string',
-    //             'first_name' => 'required|string',
-    //             'last_name' => 'required|string',
-    //             'email' => 'required|email',
-    //             'country' => 'required|string',
-    //             'city' => 'required|string',
-    //             'address' => 'required|string',
-    //             'zip_postal_code' => 'required|string',
-    //             'phone_number' => 'required|string',
-    //             'payment_method' => 'required|string',
-    //             // 'order_confirmation_number' => 'required|string|unique:orders',
-    //             'product_id' => 'required|integer',
-    //             'product_quantity' => 'required|integer',
-    //             'net_total' => 'required|integer',
-    //         ]);
-
-    //         $employee = Employee::where('id', auth('sanctum')->user()->employee_id)->first();
-    //         if (!$employee || $request->net_total > $employee->benefit_amount) {
-    //             return $this->errorResponse(['model' => 'orders'], 'Net total exceeds the employee benefit amount.', [], 422);
-    //         }
-    //         DB::beginTransaction();
-
-    //         // Prescription Image
-    //         $prescriptionImage = null;
-    //         if ($request->hasFile('prescription_image')) {
-    //             $file = $request->file('prescription_image');
-    //             $originalName = $file->getClientOriginalName();
-    //             $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-    //             $destinationPath = public_path('projectimages/orders/prescriptions');
-    //             if (!file_exists($destinationPath)) {
-    //                 mkdir($destinationPath, 0777, true);
-    //             }
-    //             $file->move($destinationPath, $fileName);
-    //             $prescriptionImage = '/projectimages/orders/prescriptions/' . $fileName;
-    //         }
-
-    //         // Frame Picture
-    //         $framePicture = null;
-    //         if ($request->hasFile('frame_picture')) {
-    //             $file = $request->file('frame_picture');
-    //             $originalName = $file->getClientOriginalName();
-    //             $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-    //             $destinationPath = public_path('projectimages/orders/frames');
-    //             if (!file_exists($destinationPath)) {
-    //                 mkdir($destinationPath, 0777, true);
-    //             }
-    //             $file->move($destinationPath, $fileName);
-    //             $framePicture = '/projectimages/orders/frames/' . $fileName;
-    //         }
-
-    //         $order = Order::create([
-    //             'order_type' => $request->order_type,
-    //             'frame_type' => $request->frame_type,
-    //             'frame_prescription' => $request->frame_prescription,
-    //             'frame_prescription_type' => $request->frame_prescription_type,
-    //             'blue_light_protection' => $request->blue_light_protection,
-    //             'prescription_image' => $prescriptionImage,
-    //             'lense_sizes' => $request->lense_sizes,
-    //             'od_left_sphere' => $request->od_left_sphere,
-    //             'od_left_cylinders' => $request->od_left_cylinders,
-    //             'od_left_axis' => $request->od_left_axis,
-    //             'od_left_nv_add' => $request->od_left_nv_add,
-    //             'od_left_2_pds' => $request->od_left_2_pds,
-    //             'od_right_sphere' => $request->od_right_sphere,
-    //             'od_right_cylinders' => $request->od_right_cylinders,
-    //             'od_right_axis' => $request->od_right_axis,
-    //             'od_right_nv_add' => $request->od_right_nv_add,
-    //             'od_right_2_pds' => $request->od_right_2_pds,
-    //             'lense_use' => $request->lense_use,
-    //             'frame_picture' => $framePicture,
-    //             'product_details' => $request->product_details,
-    //             'lense_material' => $request->lense_material,
-    //             'scratch_coating' => $request->scratch_coating,
-    //             'lens_tint' => $request->lens_tint,
-    //             'lens_protection' => $request->lens_protection,
-    //             'first_name' => $request->first_name,
-    //             'last_name' => $request->last_name,
-    //             'email' => $request->email,
-    //             'country' => $request->country,
-    //             'city' => $request->city,
-    //             'address' => $request->address,
-    //             'zip_postal_code' => $request->zip_postal_code,
-    //             'phone_number' => $request->phone_number,
-    //             'payment_method' => $request->payment_method,
-    //             'order_confirmation_number' => $request->order_confirmation_number,
-    //             'product_id' => $request->product_id,
-    //             'product_quantity' => $request->product_quantity,
-    //             'order_status' => 'Pending',
-    //             'net_total' => $request->net_total,
-    //             'employee_id' => auth('sanctum')->user()->employee_id,
-    //             'company_id' => auth('sanctum')->user()->company_id,
-    //         ]);
-    //         $employee = Employee::findOrFail(auth('sanctum')->user()->employee_id);
-    //         $employee->benefit_amount -= $request->net_total;
-    //         $employee->save();
-    //         $transaction = Transaction::create([
-    //             'employee_id' => auth('sanctum')->user()->employee_id,
-    //             'transaction_type' => 'debit',
-    //             'amount' => $request->net_total ?? '',
-    //             'balance' => $employee->benefit_amount ?? '',
-    //             'description' => 'order',
-    //         ]);
-    //         DB::commit();
-    //         return $this->successResponse(array('model' => 'orders'), 'Order created successfully', [
-    //             'order' => $order,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-    //     }
-    // }
 
     public function newPresOrder(Request $request)
     {
@@ -358,11 +220,49 @@ class OrderController extends Controller
         ]);
 
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
-        try {
-            Mail::to($user->email)->send(new OrderConfirmationMail($order));
-        } catch (\Exception $e) {
-            Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+
+
+         
+        $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
+        $confirmation_num = $order->order_confirmation_number;
+
+        $apiKey = env('GHL_API_KEY');
+        $baseUrl = 'https://rest.gohighlevel.com/v1';
+        
+        // Find the contact in HighLevel CRM
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $apiKey,
+            'Content-Type' => 'application/json',
+        ])->get($baseUrl . '/contacts/', [
+            'email' => $email
+        ]);
+        
+        if ($response->successful() && isset($response->json()['contacts'][0]['id'])) {
+            $contactId = $response->json()['contacts'][0]['id'];
+        
+            // Add "order-confirmation" tag and confirmation number
+            Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->patch($baseUrl . '/contacts/' . $contactId, [
+                'customField' => [
+                    'order_confirmation_number' => $confirmation_num
+                ]
+            ]);
+        
+            // Add trigger tag
+            Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($baseUrl . '/contacts/' . $contactId . '/tags', [
+                'tags' => ['order-confirmation']
+            ]);
         }
+        
+    
+
+
+        
         return response()->json([
             'status' => true,
             'message' => 'Order and prescription details saved successfully.',
@@ -535,14 +435,54 @@ class OrderController extends Controller
             'description' => 'order',
         ]);
 
-        
-        $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
-        try {
-            Mail::to($user->email)->send(new OrderConfirmationMail($order));
-        } catch (\Exception $e) {
-            Log::error('Failed to send order confirmation email: ' . $e->getMessage());
-        }
 
+        $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found.',
+            ], 404);
+        }
+    
+        $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
+        $confirmation_num = $order->order_confirmation_number;
+       
+        $apiKey = env('GHL_API_KEY');
+        $baseUrl = 'https://rest.gohighlevel.com/v1';
+        
+        // Find the contact in HighLevel CRM
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $apiKey,
+            'Content-Type' => 'application/json',
+        ])->get($baseUrl . '/contacts/', [
+            'email' => $email
+        ]);
+        
+        if ($response->successful() && isset($response->json()['contacts'][0]['id'])) {
+            $contactId = $response->json()['contacts'][0]['id'];
+        
+            // Add "order-confirmation" tag and confirmation number
+            Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->patch($baseUrl . '/contacts/' . $contactId, [
+                'customField' => [
+                    'order_confirmation_number' => $confirmation_num
+                ]
+            ]);
+        
+            // Add trigger tag
+            Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($baseUrl . '/contacts/' . $contactId . '/tags', [
+                'tags' => ['order-confirmation']
+            ]);
+        }
+        
+    
 
         return response()->json([
             'status' => true,
@@ -552,6 +492,9 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
+
+
+
     private function uploadImages($image, $directory = 'products')
     {
         $destinationPath = public_path("projectimages/{$directory}");

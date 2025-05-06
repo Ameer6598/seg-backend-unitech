@@ -3,8 +3,11 @@
 namespace App\Observers;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
 use App\Mail\SendMailToNewUser;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+
 
 class UserObserver
 {
@@ -13,14 +16,39 @@ class UserObserver
      */
     public function created(User $user): void
     {
+        $apiKey = env('GHL_API_KEY');
+        $baseUrl = 'https://rest.gohighlevel.com/v1';
+    
         $verificationLink = url('https://app.safetyeyeguard.com/new-password/' . $user->id . '/' . $user->verification_number);
-        Mail::to($user->email)->queue(new SendMailToNewUser([
-            'id' => $user->id,
-            'name' => $user->name,
-            'verification_number' => $user->verification_number,
-            'verification_link' => $verificationLink,
-        ]));
+    
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $apiKey,
+            'Content-Type' => 'application/json',
+        ])->post($baseUrl . '/contacts/', [
+            'email' => $user->email,
+            'firstName' => $user->name,
+            'phone' => $user->Employedata->phone ?? null,
+            'role'=>$user->role,
+            'customField' => [
+                'verification_link' => $verificationLink
+            ],
+        ]);
+        
+    
+        if ($response->successful()) {
+            $contactId = $response->json('contact.id');
+    
+            // Step 2: Add tag to trigger workflow
+            Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($baseUrl . '/contacts/' . $contactId . '/tags', [
+                'tags' => ['new-user-welcome'], // Your workflow trigger tag
+            ]);
+        }
     }
+    
 
     /**
      * Handle the User "updated" event.
