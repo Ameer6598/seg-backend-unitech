@@ -18,10 +18,13 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
-'stripe' => [
-    'secret' => env('STRIPE_KEY'),
-],
-
+    'stripe' => [
+        'secret' => env('STRIPE_KEY'),
+    ],
+    'ghl' => [
+        'api_key' => env('GHL_API_KEY'),
+        'base_url' => 'https://rest.gohighlevel.com/v1/'
+    ],
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
