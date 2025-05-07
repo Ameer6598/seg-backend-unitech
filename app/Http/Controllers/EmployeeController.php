@@ -31,6 +31,7 @@ class EmployeeController extends Controller
             $request->validate([
                 'username' => 'required',
                 'email' => 'required|email|unique:users,email',
+                'phone' => 'required|unique:employees,phone',
                 'password' => 'required',
                 'designation' => 'required',
                 'benefit_amount' => ['nullable', 'numeric'],

@@ -30,6 +30,7 @@ class CompanyController extends Controller
                 'company_name' => 'required|string|max:255',
                 'username' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
+                'phone' => 'required|unique:companies,phone',
                 'password' => 'required|string|min:6',
                 'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
             ]);
