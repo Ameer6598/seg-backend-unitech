@@ -38,17 +38,18 @@ class UserObserver
     
         if ($response->successful()) {
             $contactId = $response->json('contact.id');
-    
-            // Step 2: Add tag to trigger workflow
             Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type' => 'application/json',
             ])->post($baseUrl . '/contacts/' . $contactId . '/tags', [
-                'tags' => ['new-user-welcome'], // Your workflow trigger tag
+                'tags' => ['verification_email  '], // Your workflow trigger tag
             ]);
         }
     }
     
+
+
+
 
     /**
      * Handle the User "updated" event.

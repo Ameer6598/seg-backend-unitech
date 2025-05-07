@@ -226,41 +226,9 @@ class OrderController extends Controller
         $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
         $confirmation_num = $order->order_confirmation_number;
 
-        $apiKey = env('GHL_API_KEY');
-        $baseUrl = 'https://rest.gohighlevel.com/v1';
-        
-        // Find the contact in HighLevel CRM
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $apiKey,
-            'Content-Type' => 'application/json',
-        ])->get($baseUrl . '/contacts/', [
-            'email' => $email
-        ]);
-        
-        if ($response->successful() && isset($response->json()['contacts'][0]['id'])) {
-            $contactId = $response->json()['contacts'][0]['id'];
-        
-            // Add "order-confirmation" tag and confirmation number
-            Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type' => 'application/json',
-            ])->patch($baseUrl . '/contacts/' . $contactId, [
-                'customField' => [
-                    'order_confirmation_number' => $confirmation_num
-                ]
-            ]);
-        
-            // Add trigger tag
-            Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post($baseUrl . '/contacts/' . $contactId . '/tags', [
-                'tags' => ['order-confirmation']
-            ]);
-        }
-        
+     
     
-
+        Mail::to($email)->send(new OrderConfirmationMail($order));
 
         
         return response()->json([
@@ -449,40 +417,7 @@ class OrderController extends Controller
         $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
         $confirmation_num = $order->order_confirmation_number;
        
-        $apiKey = env('GHL_API_KEY');
-        $baseUrl = 'https://rest.gohighlevel.com/v1';
-        
-        // Find the contact in HighLevel CRM
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $apiKey,
-            'Content-Type' => 'application/json',
-        ])->get($baseUrl . '/contacts/', [
-            'email' => $email
-        ]);
-        
-        if ($response->successful() && isset($response->json()['contacts'][0]['id'])) {
-            $contactId = $response->json()['contacts'][0]['id'];
-        
-            // Add "order-confirmation" tag and confirmation number
-            Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type' => 'application/json',
-            ])->patch($baseUrl . '/contacts/' . $contactId, [
-                'customField' => [
-                    'order_confirmation_number' => $confirmation_num
-                ]
-            ]);
-        
-            // Add trigger tag
-            Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post($baseUrl . '/contacts/' . $contactId . '/tags', [
-                'tags' => ['order-confirmation']
-            ]);
-        }
-        
-    
+        Mail::to($email)->send(new OrderConfirmationMail($order));
 
         return response()->json([
             'status' => true,
