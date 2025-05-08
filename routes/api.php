@@ -33,13 +33,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
+
     Route::middleware('role:owner')->group(function () {
 
 
         Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
         Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemploye']);
-        Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonate']);
-
+     
 
         Route::post('update-owner-details', [AdminController::class, 'updateOwnerDetails']);
         Route::prefix('company')->group(function () {
