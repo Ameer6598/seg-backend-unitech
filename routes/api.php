@@ -12,7 +12,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\LensManegment\lensManegmentController;
-
+use App\Http\Controllers\TempOrderController;
 
 Route::get('/users', function () {
     return 'API User route done' . Hash::make('admin');
@@ -21,7 +21,7 @@ Route::get('/users', function () {
 
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::post('set/newpassword',[AuthController::class,'set']);
+Route::post('set/newpassword', [AuthController::class, 'set']);
 
 Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
 Route::post('/check-payment-status', [StripeController::class, 'checkPaymentStatus']);
@@ -33,12 +33,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
+
     Route::middleware('role:owner')->group(function () {
 
 
         Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
         Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemploye']);
-        Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonate']);
 
 
         Route::post('update-owner-details', [AdminController::class, 'updateOwnerDetails']);
@@ -90,15 +91,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:employee')->group(function () {
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
         Route::get('get-product-manufactures', [ProductController::class, 'getManufacturers']);
-        
+
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
         Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
         Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);
-        
+
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
         Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
         Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
-        Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
+        Route::post('update-employee', [EmployeeController::class, 'updatedetails']);   
+        //route for tem order
+        Route::post('orders/temp-store', [TempOrderController::class, 'saveOrderDetails']);
+        Route::get('employee/temp/order-details', [TempOrderController::class, 'getEmployeeOrderDetails']);
+
+
     });
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -196,4 +202,3 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('delete/blue-light-protection/{id}', [lensManegmentController::class, 'deleteBlueLightProtection']); // single
     });
 });
-

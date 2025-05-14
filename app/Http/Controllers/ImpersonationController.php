@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
@@ -14,35 +15,40 @@ class ImpersonationController extends Controller
 {
     use ApiResponse;
 
-    public function impersonatecompany(request $request,$id)
+    public function impersonatecompany(Request $request, $id)
     {
         if ($request->user()->role !== 'owner') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-    
+
+        $superadmin = $request->user();
+        $originalToken = $request->bearerToken();
+
         $user = User::where('role', 'company')->where('company_id', $id)->first();
-    
-        if (! $user) {
+
+        if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
-    
+
         if ($user->status == 0) {
             throw ValidationException::withMessages([
                 'email' => ['This account is currently inactive.'],
             ]);
         }
-    
-        $token = $user->createToken('impersonation_token')->plainTextToken;
-    
 
 
+        $token = $user->createToken('impersonation_token', [
+            'is_impersonation' => true,
+            'impersonator_id' => $superadmin->id,
+            'original_token' => $originalToken,
+        ])->plainTextToken;
 
         $logourl = env('LOGO_URL');
         $companyLogo = Company::where('id', $user->company_id)->value('company_logo');
         $logoUrl = $companyLogo ? $logourl . $companyLogo : null;
-    
+
         $user->load(['Employedata', 'Companydata']);
-    
+
         $filteredUserData = [
             'id' => $user->company_id,
             'username' => $user->name,
@@ -51,7 +57,7 @@ class ImpersonationController extends Controller
             'phone_no' => optional($user->Companydata)->phone,
             'address' => optional($user->Companydata)->address,
         ];
-    
+
         return $this->successResponse(array('model' => 'users'), 'Impersonated as Company successfully', [
             'access_token' => $token,
             'token_type' => 'Bearer',
@@ -66,28 +72,56 @@ class ImpersonationController extends Controller
 
     public function leaveImpersonation(Request $request)
     {
-
         $token = $request->bearerToken();
-    
-        if (! $token) {
+
+        if (!$token) {
             return response()->json(['error' => 'No token provided'], 401);
         }
-    
-        // Find the token record in personal_access_tokens table
+
         $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
-    
-        if (! $tokenModel || $tokenModel->tokenable->role !== 'owner') {
-            return response()->json(['error' => 'Invalid or unauthorized token'], 403);
+
+        if (!$tokenModel) {
+            return response()->json(['error' => 'Invalid token'], 403);
         }
-    
-        $superadmin = $tokenModel->tokenable;
-    
-        // Generate new token to resume session as superadmin
-        $newToken = $superadmin->createToken('superadmin_return')->plainTextToken;
-    
+
+        // Check if this is an impersonation token
+        if (empty($tokenModel->abilities['is_impersonation'])) {
+            return response()->json(['error' => 'Not an impersonation token'], 400);
+        }
+
+        $impersonatorId = $tokenModel->abilities['impersonator_id'];
+        $originalToken = $tokenModel->abilities['original_token'];
+
+        // Revoke the impersonation token
+        $tokenModel->delete();
+
+        // Get the original superadmin user
+        $superadmin = User::find($impersonatorId);
+        if (!$superadmin) {
+            return response()->json(['error' => 'Original user not found'], 404);
+        }
+
+        // Verify the original token is still valid
+        $originalTokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($originalToken);
+        if (!$originalTokenModel || $originalTokenModel->tokenable_id != $impersonatorId) {
+            // If original token is invalid, create a new one
+            $newToken = $superadmin->createToken('superadmin_return')->plainTextToken;
+            return response()->json([
+                'message' => 'Returned to superadmin account successfully (new token issued)',
+                'access_token' => $newToken,
+                'token_type' => 'Bearer',
+                'role' => $superadmin->role,
+                'user' => [
+                    'id' => $superadmin->id,
+                    'name' => $superadmin->name,
+                    'email' => $superadmin->email,
+                ]
+            ]);
+        }
+
         return response()->json([
             'message' => 'Returned to superadmin account successfully',
-            'access_token' => $newToken,
+            'access_token' => $originalToken,
             'token_type' => 'Bearer',
             'role' => $superadmin->role,
             'user' => [
@@ -97,6 +131,4 @@ class ImpersonationController extends Controller
             ]
         ]);
     }
-    
-
 }
