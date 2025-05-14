@@ -36,7 +36,7 @@ class ImpersonationController extends Controller
             ]);
         }
 
-        // Create token with impersonation metadata
+
         $token = $user->createToken('impersonation_token', [
             'is_impersonation' => true,
             'impersonator_id' => $superadmin->id,

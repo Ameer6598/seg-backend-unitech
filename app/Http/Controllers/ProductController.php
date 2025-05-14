@@ -156,7 +156,7 @@ class ProductController extends Controller
             }
 
             // Update product fields
-            $product->update($request->except('images', 'image_ids', 'color', 'frame_sizes')); // Exclude unnecessary fields
+            $product->update($request->except('images', 'image_ids', 'color', 'frame_sizes'));
 
             // Handle updating the many-to-many relationships for colors and frame sizes
             if ($request->has('color')) {
@@ -866,7 +866,7 @@ class ProductController extends Controller
     public function getStyles()
     {
         return $this->successResponse(['model' => 'frame_size'], 'Style fetched successfully', [
-            'rim_types' => Style::all(),
+            'styles' => Style::all(),
         ]);
     }
 

@@ -18,6 +18,7 @@ use App\Mail\OrderConfirmationMail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use App\Models\EmployeTempOrderdetail;
 use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
@@ -222,15 +223,17 @@ class OrderController extends Controller
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
 
 
-         
+
         $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
         $confirmation_num = $order->order_confirmation_number;
 
-     
-    
-        Mail::to($email)->send(new OrderConfirmationMail($order));
 
+
+        Mail::to($email)->send(new OrderConfirmationMail($order));
         
+        $this->deleteEmployeeOrderDetails($employeeId);
+
+
         return response()->json([
             'status' => true,
             'message' => 'Order and prescription details saved successfully.',
@@ -239,9 +242,27 @@ class OrderController extends Controller
             'prescription_id' => $pres->id,
         ]);
     }
+    public function deleteEmployeeOrderDetails($employeeId)
+    {
+        $orderDetails = EmployeTempOrderdetail::where('employee_id', $employeeId)->first();
+
+        if (!$orderDetails) {
+            return response()->json(['message' => 'No order details found for this employee.'], 404);
+        }
 
 
+        if ($orderDetails->prescription_image && file_exists(public_path($orderDetails->prescription_image))) {
+            unlink(public_path($orderDetails->prescription_image));
+        }
 
+        if ($orderDetails->frame_picture && file_exists(public_path($orderDetails->frame_picture))) {
+            unlink(public_path($orderDetails->frame_picture));
+        }
+
+        $orderDetails->delete();
+
+        return response()->json(['message' => 'Employee order details and associated images deleted successfully.']);
+    }
 
 
     public function existingPresOrder(Request $request)
@@ -413,10 +434,10 @@ class OrderController extends Controller
                 'message' => 'User not found.',
             ], 404);
         }
-    
+
         $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
         $confirmation_num = $order->order_confirmation_number;
-       
+
         Mail::to($email)->send(new OrderConfirmationMail($order));
 
         return response()->json([
