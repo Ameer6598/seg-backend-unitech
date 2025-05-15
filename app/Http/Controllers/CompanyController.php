@@ -24,79 +24,84 @@ class CompanyController extends Controller
     use ApiResponse;
 
     public function create(Request $request)
-    {
-        try {
-            $request->validate([
-                'company_name' => 'required|string|max:255',
-                'username' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'phone' => 'required|unique:companies,phone',
-                'password' => 'required|string|min:6',
-                'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
-            ]);
+{
+    try {
+        $request->validate([
+            'company_name' => 'required|string|max:255',
+            'username' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'required|unique:companies,phone', // Checks uniqueness in companies table
+            'password' => 'required|string|min:6',
+            'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
+        ]);
 
-            $apiKey = env('MIAL_BOX'); // Ensure this is correctly set in .env
-            if (!$apiKey) {
-                throw new \Exception('MailboxLayer API key is missing.');
-            }
-            $response = Http::get("https://apilayer.net/api/check", [
-                'access_key' => $apiKey,
-                'email' => $request->email,
-            ]);
-    
-            if ($response->failed()) {
-                throw new \Exception('Email validation service is unavailable.');
-            }
-    
-            $emailData = $response->json();
-    
-            if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
-                throw new \Exception('Invalid or non-existent email address.');
-            }
-
-            DB::beginTransaction();
-
-            $logoPath = null;
-            if ($request->hasFile('company_logo')) {
-                $file = $request->file('company_logo');
-                $originalName = $file->getClientOriginalName();
-                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-                $destinationPath = public_path('projectimages/company_logos');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-                $file->move($destinationPath, $fileName);
-                $logoPath = '/projectimages/company_logos/' . $fileName;
-            }
-
-            $company = Company::create([
-                'company_name' => $request->company_name,
-                'address' => $request->address ?? '',
-                'phone' => $request->phone ?? '',
-                'company_logo' => $logoPath,
-            ]);
-
-            $user =  User::create([
-                'name' => $request->username,
-                'email' => $request->email,
-                'role' => 'company',
-                'company_id' => $company->id,
-                'verification_number' => Str::uuid(),
-                'password' => Hash::make($request->password),
-            ]);
-            DB::commit();
-
-            return $this->successResponse(
-                ['model' => 'company'],
-                'Company and User created successfully',
-                ['company' => $company]
-            );
-        } catch (\Exception $e) {
-
-            DB::rollBack();
-            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422); 
+        // Manual check for phone number in employees table
+        if (\App\Models\Employee::where('phone', $request->phone)->exists()) {
+            throw new \Exception('The phone number is already in use by an employee.');
         }
+
+        $apiKey = env('MIAL_BOX'); // Ensure this is correctly set in .env
+        if (!$apiKey) {
+            throw new \Exception('MailboxLayer API key is missing.');
+        }
+        $response = Http::get("https://apilayer.net/api/check", [
+            'access_key' => $apiKey,
+            'email' => $request->email,
+        ]);
+
+        if ($response->failed()) {
+            throw new \Exception('Email validation service is unavailable.');
+        }
+
+        $emailData = $response->json();
+
+        if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
+            throw new \Exception('Invalid or non-existent email address.');
+        }
+
+        DB::beginTransaction();
+
+        $logoPath = null;
+        if ($request->hasFile('company_logo')) {
+            $file = $request->file('company_logo');
+            $originalName = $file->getClientOriginalName();
+            $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
+            $destinationPath = public_path('projectimages/company_logos');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0777, true);
+            }
+            $file->move($destinationPath, $fileName);
+            $logoPath = '/projectimages/company_logos/' . $fileName;
+        }
+
+        $company = Company::create([
+            'company_name' => $request->company_name,
+            'address' => $request->address ?? '',
+            'phone' => $request->phone ?? '',
+            'company_logo' => $logoPath,
+        ]);
+
+        $user = User::create([
+            'name' => $request->username,
+            'email' => $request->email,
+            'role' => 'company',
+            'company_id' => $company->id,
+            'verification_number' => Str::uuid(),
+            'password' => Hash::make($request->password),
+        ]);
+
+        DB::commit();
+
+        return $this->successResponse(
+            ['model' => 'company'],
+            'Company and User created successfully',
+            ['company' => $company]
+        );
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
     }
+}
 
 
 

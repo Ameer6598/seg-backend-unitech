@@ -210,6 +210,7 @@ class OrderController extends Controller
         }
         $employee->benefit_amount -= $deductionAmount;
         $employee->save();
+        $this->deleteEmployeeOrderDetails($employeeId);
 
 
         Transaction::create([
@@ -230,8 +231,6 @@ class OrderController extends Controller
 
 
         Mail::to($email)->send(new OrderConfirmationMail($order));
-        
-        $this->deleteEmployeeOrderDetails($employeeId);
 
 
         return response()->json([
@@ -242,28 +241,6 @@ class OrderController extends Controller
             'prescription_id' => $pres->id,
         ]);
     }
-    public function deleteEmployeeOrderDetails($employeeId)
-    {
-        $orderDetails = EmployeTempOrderdetail::where('employee_id', $employeeId)->first();
-
-        if (!$orderDetails) {
-            return response()->json(['message' => 'No order details found for this employee.'], 404);
-        }
-
-
-        if ($orderDetails->prescription_image && file_exists(public_path($orderDetails->prescription_image))) {
-            unlink(public_path($orderDetails->prescription_image));
-        }
-
-        if ($orderDetails->frame_picture && file_exists(public_path($orderDetails->frame_picture))) {
-            unlink(public_path($orderDetails->frame_picture));
-        }
-
-        $orderDetails->delete();
-
-        return response()->json(['message' => 'Employee order details and associated images deleted successfully.']);
-    }
-
 
     public function existingPresOrder(Request $request)
     {
@@ -416,6 +393,11 @@ class OrderController extends Controller
         }
         $employee->benefit_amount -= $deductionAmount;
         $employee->save();
+        $this->deleteEmployeeOrderDetails($employeeId);
+
+
+
+
         Transaction::create([
             'employee_id' => $employeeId,
             'transaction_type' => 'debit',
@@ -448,6 +430,32 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
+
+    public function deleteEmployeeOrderDetails($employeeId)
+    {
+
+
+        $orderDetails = EmployeTempOrderdetail::where('employee_id', $employeeId)->first();
+
+        if (!$orderDetails) {
+            return;
+        }
+
+        if ($orderDetails->prescription_image && file_exists(public_path($orderDetails->prescription_image))) {
+            unlink(public_path($orderDetails->prescription_image));
+        } else {
+        }
+
+        if ($orderDetails->frame_picture && file_exists(public_path($orderDetails->frame_picture))) {
+            unlink(public_path($orderDetails->frame_picture));
+        } else {
+        }
+
+        $orderDetails->delete();
+    }
+
+
+
 
 
 

@@ -69,6 +69,59 @@ class ImpersonationController extends Controller
         ]);
     }
 
+    public function impersonateemployee(Request $request, $id)
+    {
+        if ($request->user()->role !== 'owner') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $superadmin = $request->user();
+        $originalToken = $request->bearerToken();
+
+        $user = User::where('role', 'employee')->where('employee_id', $id)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        if ($user->status == 0) {
+            throw ValidationException::withMessages([
+                'email' => ['This account is currently inactive.'],
+            ]);
+        }
+        
+
+        $token = $user->createToken('impersonation_token', [
+            'is_impersonation' => true,
+            'impersonator_id' => $superadmin->id,
+            'original_token' => $originalToken,
+        ])->plainTextToken;
+
+        $logourl = env('LOGO_URL');
+        $companyLogo = Company::where('id', $user->company_id)->value('company_logo');
+        $logoUrl = $companyLogo ? $logourl . $companyLogo : null;
+
+        $user->load(['Employedata', 'Companydata']);
+
+        $filteredUserData = [
+            'id' => $user->company_id,
+            'username' => $user->name,
+            'name' => optional($user->Companydata)->company_name,
+            'email' => $user->email,
+            'phone_no' => optional($user->Companydata)->phone,
+            'address' => optional($user->Companydata)->address,
+        ];
+
+        return $this->successResponse(array('model' => 'users'), 'Impersonated as Company successfully', [
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'role' => $user->role,
+            'benefit_amount' => Employee::where('id', $user->employee_id)->value('benefit_amount'),
+            'order_count' => Order::where('employee_id', $user->employee_id)->count(),
+            'logourl' => $logoUrl,
+            'UserData' => $filteredUserData,
+        ]);
+    }
 
     public function leaveImpersonation(Request $request)
     {
