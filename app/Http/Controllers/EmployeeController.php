@@ -26,74 +26,80 @@ class EmployeeController extends Controller
     use ApiResponse;
 
     public function create(Request $request)
-    {
-        try {
-            $request->validate([
-                'username' => 'required',
-                'email' => 'required|email|unique:users,email',
-                'phone' => 'required|unique:employees,phone',
-                'password' => 'required',
-                'designation' => 'required',
-                'benefit_amount' => ['nullable', 'numeric'],
-            ]);
+{
+    try {
+        $request->validate([
+            'username' => 'required',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'required|unique:employees,phone', // Checks uniqueness in employees table
+            'password' => 'required',
+            'designation' => 'required',
+            'benefit_amount' => ['nullable', 'numeric'],
+        ]);
 
-            $apiKey = env('MIAL_BOX'); // Ensure this is correctly set in .env
-            if (!$apiKey) {
-                throw new \Exception('MailboxLayer API key is missing.');
-            }
-            $response = Http::get("https://apilayer.net/api/check", [
-                'access_key' => $apiKey,
-                'email' => $request->email,
-            ]);
-    
-            if ($response->failed()) {
-                throw new \Exception('Email validation service is unavailable.');
-            }
-    
-            $emailData = $response->json();
-    
-            if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
-                throw new \Exception('Invalid or non-existent email address.');
-            }
-
-            DB::beginTransaction();
-            $employee = Employee::create([
-                'designation' => $request->designation     ?? '',
-                'status' => $request->status      ?? '',
-                'phone' => $request->phone ?? '',
-                'benefit_amount' => $request->benefit_amount ?? 0,
-                'company_id' => auth('sanctum')->user()->company_id,
-            ]);
-
-            User::create([
-                'name' => $request->username,
-                'email' => $request->email,
-                'role' => 'employee',
-                'company_id' => auth('sanctum')->user()->company_id,
-                'employee_id' => $employee->id,
-                'verification_number' => Str::uuid(),
-                'password' => Hash::make($request->password),
-            ]);
-            if ($request->benefit_amount) {
-                Transaction::create([
-                    'employee_id' => $employee->id,
-                    'transaction_type' => 'credit',
-                    'amount' => $request->benefit_amount ?? '',
-                    'balance' => $request->benefit_amount ?? '',
-                    'description' => $request->description ?? '',
-                ]);
-            }
-
-            DB::commit();
-
-            return $this->successResponse(array('model' => 'employee'), 'Employee created successfully', [
-                'employee' => $employee,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
+        // Manual check for phone number in companies table
+        if (\App\Models\Company::where('phone', $request->phone)->exists()) {
+            throw new \Exception('The phone number is already in use by a company.');
         }
+
+        $apiKey = env('MIAL_BOX'); // Ensure this is correctly set in .env
+        if (!$apiKey) {
+            throw new \Exception('MailboxLayer API key is missing.');
+        }
+        $response = Http::get("https://apilayer.net/api/check", [
+            'access_key' => $apiKey,
+            'email' => $request->email,
+        ]);
+
+        if ($response->failed()) {
+            throw new \Exception('Email validation service is unavailable.');
+        }
+
+        $emailData = $response->json();
+
+        if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
+            throw new \Exception('Invalid or non-existent email address.');
+        }
+
+        DB::beginTransaction();
+        $employee = Employee::create([
+            'designation' => $request->designation ?? '',
+            'status' => $request->status ?? '',
+            'phone' => $request->phone ?? '',
+            'benefit_amount' => $request->benefit_amount ?? 0,
+            'company_id' => auth('sanctum')->user()->company_id,
+        ]);
+
+        User::create([
+            'name' => $request->username,
+            'email' => $request->email,
+            'role' => 'employee',
+            'company_id' => auth('sanctum')->user()->company_id,
+            'employee_id' => $employee->id,
+            'verification_number' => Str::uuid(),
+            'password' => Hash::make($request->password),
+        ]);
+
+        if ($request->benefit_amount) {
+            Transaction::create([
+                'employee_id' => $employee->id,
+                'transaction_type' => 'credit',
+                'amount' => $request->benefit_amount ?? '',
+                'balance' => $request->benefit_amount ?? '',
+                'description' => $request->description ?? '',
+            ]);
+        }
+
+        DB::commit();
+
+        return $this->successResponse(['model' => 'employee'], 'Employee created successfully', [
+            'employee' => $employee,
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
     }
+}
 
     public function update(Request $request)
     {

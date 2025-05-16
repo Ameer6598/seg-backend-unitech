@@ -35,7 +35,7 @@ class TempOrderController extends Controller
                     'od_right_nv_add' => 'required|string|max:10',
                     'od_right_2_pds' => 'required|string|max:10',
                     'pupil_distance' => 'required|string',
-                   
+
                 ]);
 
                 $temorderdetails = EmployeTempOrderdetail::firstOrNew([
@@ -59,8 +59,18 @@ class TempOrderController extends Controller
                 ]));
 
                 if ($request->hasFile('prescription_image')) {
+
+                    if (!empty($temorderdetails->prescription_image)) {
+                        $oldImagePath = public_path($temorderdetails->prescription_image);
+                        if (file_exists($oldImagePath)) {
+                            unlink($oldImagePath);
+                        }
+                    }
+
                     $temorderdetails->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
                 }
+
+
 
                 $temorderdetails->save();
             } elseif ($step == 2) {
@@ -82,8 +92,16 @@ class TempOrderController extends Controller
                 ]));
 
                 if ($request->hasFile('frame_picture')) {
+                    if (!empty($temorderdetails->frame_picture)) {
+                        $oldImagePath = public_path($temorderdetails->frame_picture);
+                        if (file_exists($oldImagePath)) {
+                            unlink($oldImagePath);
+                        }
+                    }
+
                     $temorderdetails->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
                 }
+
 
                 $temorderdetails->save();
             } else {
@@ -92,7 +110,7 @@ class TempOrderController extends Controller
 
             DB::commit();
 
-            return $this->successResponse(null, 'Order details saved successfully',$temorderdetails);
+            return $this->successResponse(null, 'Order details saved successfully', $temorderdetails);
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(null, 'Something went wrong', ['error' => $e->getMessage()], 500);
@@ -102,7 +120,7 @@ class TempOrderController extends Controller
 
 
 
- public function getEmployeeOrderDetails(Request $request)
+    public function getEmployeeOrderDetails(Request $request)
     {
         try {
             $employeeId = auth('sanctum')->user()->employee_id;
@@ -115,7 +133,7 @@ class TempOrderController extends Controller
                 $orderDetails
             );
         } catch (\Exception $e) {
-            return $this->errorResponse(null, 'Failed to fetch order details', ['error' => $e->getMessage()], 500);
+            return $this->errorResponse(['model' => 'products'], 'Failed to fetch order details', ['error' => $e->getMessage()], 500);
         }
     }
 

@@ -39,7 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
         Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
-        Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemploye']);
+        Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
 
 
         Route::post('update-owner-details', [AdminController::class, 'updateOwnerDetails']);
