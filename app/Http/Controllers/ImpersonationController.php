@@ -112,7 +112,7 @@ class ImpersonationController extends Controller
             'address' => optional($user->Companydata)->address,
         ];
 
-        return $this->successResponse(array('model' => 'users'), 'Impersonated as Employe successfully', [
+        return $this->successResponse(array('model' => 'users'), 'Impersonated as Company successfully', [
             'access_token' => $token,
             'token_type' => 'Bearer',
             'role' => $user->role,
@@ -124,45 +124,43 @@ class ImpersonationController extends Controller
     }
 
     public function leaveImpersonation(Request $request)
-{
-    $token = $request->bearerToken();
+    {
+        $token = $request->bearerToken();
 
-    if (!$token) {
-        return response()->json(['error' => 'No token provided'], 401);
-    }
+        if (!$token) {
+            return response()->json(['error' => 'No token provided'], 401);
+        }
 
-    $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+        $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
 
-    if (!$tokenModel) {
-        return response()->json(['error' => 'Invalid token'], 403);
-    }
+        if (!$tokenModel) {
+            return response()->json(['error' => 'Invalid token'], 403);
+        }
 
-    // Check if this is an impersonation token
-    if (empty($tokenModel->abilities['is_impersonation'])) {
-        return response()->json(['error' => 'Not an impersonation token'], 400);
-    }
+        // Check if this is an impersonation token
+        if (empty($tokenModel->abilities['is_impersonation'])) {
+            return response()->json(['error' => 'Not an impersonation token'], 400);
+        }
 
-    $impersonatorId = $tokenModel->abilities['impersonator_id'];
-    $originalToken = $tokenModel->abilities['original_token'];
+        $impersonatorId = $tokenModel->abilities['impersonator_id'];
+        $originalToken = $tokenModel->abilities['original_token'];
 
-    // Revoke the impersonation token
-    $tokenModel->delete();
+        // Revoke the impersonation token
+        $tokenModel->delete();
 
-    // Get the original superadmin user
-    $superadmin = User::find($impersonatorId);
-    if (!$superadmin) {
-        return response()->json(['error' => 'Original user not found'], 404);
-    }
+        // Get the original superadmin user
+        $superadmin = User::find($impersonatorId);
+        if (!$superadmin) {
+            return response()->json(['error' => 'Original user not found'], 404);
+        }
 
-    // Verify the original token is still valid
-    $originalTokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($originalToken);
-    if (!$originalTokenModel || $originalTokenModel->tokenable_id != $impersonatorId) {
-        // If original token is invalid, create a new one
-        $newToken = $superadmin->createToken('superadmin_return')->plainTextToken;
-        return $this->successResponse(
-            ['model' => 'user'],
-            'Returned to superadmin account successfully (new token issued)',
-            [
+        // Verify the original token is still valid
+        $originalTokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($originalToken);
+        if (!$originalTokenModel || $originalTokenModel->tokenable_id != $impersonatorId) {
+            // If original token is invalid, create a new one
+            $newToken = $superadmin->createToken('superadmin_return')->plainTextToken;
+            return response()->json([
+                'message' => 'Returned to superadmin account successfully (new token issued)',
                 'access_token' => $newToken,
                 'token_type' => 'Bearer',
                 'role' => $superadmin->role,
@@ -171,15 +169,11 @@ class ImpersonationController extends Controller
                     'name' => $superadmin->name,
                     'email' => $superadmin->email,
                 ]
-            ]
-        );
-    }
+            ]);
+        }
 
-    // Return with original token
-    return $this->successResponse(
-        ['model' => 'user'],
-        'Returned to superadmin account successfully',
-        [
+        return response()->json([
+            'message' => 'Returned to superadmin account successfully',
             'access_token' => $originalToken,
             'token_type' => 'Bearer',
             'role' => $superadmin->role,
@@ -188,11 +182,6 @@ class ImpersonationController extends Controller
                 'name' => $superadmin->name,
                 'email' => $superadmin->email,
             ]
-        ]
-    );
-}
-
-
-
-    
+        ]);
+    }
 }

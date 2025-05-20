@@ -34,9 +34,7 @@ class OrderController extends Controller
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'required|string',
             'order_type' => 'required|string|max:255',
-            'lense_sizes' => 'required|string|max:255',
-            'lense_use' => 'required|string|max:255',
-            'product_details' => 'required|string|max:1000',
+            
             'lense_material' => 'required|string|max:255',
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
@@ -141,9 +139,7 @@ class OrderController extends Controller
         $order->fill($request->only([
             'blue_light_protection',
             'order_type',
-            'lense_sizes',
-            'lense_use',
-            'product_details',
+           
             'lense_material',
             'scratch_coating',
             'lens_tint',
@@ -246,10 +242,7 @@ class OrderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'required|string',
-            'order_type' => 'required|string|max:255',
-            'lense_sizes' => 'required|string|max:255',
-            'lense_use' => 'required|string|max:255',
-            'product_details' => 'required|string|max:1000',
+            'order_type' => 'required|string|max:255',           
             'lense_material' => 'required|string|max:255',
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
@@ -323,9 +316,6 @@ class OrderController extends Controller
         $order->fill($request->only([
             'blue_light_protection',
             'order_type',
-            'lense_sizes',
-            'lense_use',
-            'product_details',
             'lense_material',
             'scratch_coating',
             'lens_tint',
@@ -613,6 +603,259 @@ class OrderController extends Controller
 
 
     public function updateOrder(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'blue_light_protection' => 'nullable|string',
+            'order_type' => 'nullable|string|max:255',
+            
+            'lense_material' => 'nullable|string|max:255',
+            'scratch_coating' => 'nullable',
+            'lens_tint' => 'nullable|string|max:255',
+            'lens_protection' => 'nullable|string|max:255',
+            // Billing details
+            'billing_first_name' => 'nullable|string|max:255',
+            'billing_last_name' => 'nullable|string|max:255',
+            'billing_email' => 'nullable|email|max:255',
+            'billing_country' => 'nullable|string|max:255',
+            'billing_city' => 'nullable|string|max:255',
+            'billing_state' => 'nullable|string|max:255',
+            'billing_address' => 'nullable|string|max:1000',
+            'billing_second_address' => 'nullable|string|max:1000',
+            'billing_zip_postal_code' => 'nullable|string|max:20',
+            'billing_phone_number' => 'nullable|string|max:20',
+            'order_status' => 'nullable|in:Pending,Confirmed,Shipped,Delivered',
+
+            // Shipping details
+            'shipping_first_name' => 'nullable|string|max:255',
+            'shipping_last_name' => 'nullable|string|max:255',
+            'shipping_email' => 'nullable|email|max:255',
+            'shipping_country' => 'nullable|string|max:255',
+            'shipping_city' => 'nullable|string|max:255',
+            'shipping_state' => 'nullable|string|max:255',
+            'shipping_address' => 'nullable|string|max:1000',
+            'shipping_second_address' => 'nullable|string|max:1000',
+            'shipping_zip_postal_code' => 'nullable|string|max:20',
+            'shipping_phone_number' => 'nullable|string|max:20',
+            'shipping_additional_information' => 'nullable|string|max:255',
+            'payment_method' => 'nullable|string|max:100',
+            'product_id' => 'nullable|integer',
+            'color' => 'nullable|integer',
+            'frame_size' => 'nullable',
+            'product_quantity' => 'nullable|integer|min:1',
+            'net_total' => 'nullable|numeric|min:0',
+            'paid_ammount' => 'nullable|numeric|min:0',
+            // Prescription fields
+            'frame_type' => 'nullable|string|max:255',
+            'frame_prescription' => 'nullable|string|max:255',
+            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'od_left_sphere' => 'nullable|string|max:10',
+            'od_left_cylinders' => 'nullable|string|max:10',
+            'od_left_axis' => 'nullable|string|max:10',
+            'od_left_nv_add' => 'nullable|string|max:10',
+            'od_left_2_pds' => 'nullable|string|max:10',
+            'od_right_sphere' => 'nullable|string|max:10',
+            'od_right_cylinders' => 'nullable|string|max:10',
+            'od_right_axis' => 'nullable|string|max:10',
+            'od_right_nv_add' => 'nullable|string|max:10',
+            'od_right_2_pds' => 'nullable|string|max:10',
+            'pupil_distance' => 'nullable|string',
+            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'pupil_distance_online' => 'nullable|string',
+            'od_left_2_pds_online' => 'nullable|string|max:10',
+            'od_right_2_pds_online' => 'nullable|string|max:10',
+            'update_points' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $employeeId = auth('sanctum')->user()->employee_id;
+        $companyId = auth('sanctum')->user()->company_id;
+
+        // Find existing order
+        $order = Order::findOrFail($id);
+
+
+
+        // Update prescription details
+        $pres = PrecriptionDetails::findOrFail($order->prescription_id);
+        foreach (
+            $request->only([
+                'frame_type',
+                'frame_prescription',
+                'od_left_sphere',
+                'od_left_cylinders',
+                'od_left_axis',
+                'od_left_nv_add',
+                'od_left_2_pds',
+                'od_right_sphere',
+                'od_right_cylinders',
+                'od_right_axis',
+                'od_right_nv_add',
+                'od_right_2_pds',
+                'pupil_distance',
+                'pupil_distance_online',
+                'od_left_2_pds_online',
+                'od_right_2_pds_online',
+            ]) as $key => $value
+        ) {
+            $pres->$key = $value;
+        }
+
+        if ($request->hasFile('prescription_image')) {
+            $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
+        }
+        if ($request->hasFile('frame_picture')) {
+            $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
+        }
+        $pres->save();
+
+
+        foreach (
+            $request->only([
+                'blue_light_protection',
+                'order_type',
+                'lense_material',
+                'scratch_coating',
+                'lens_tint',
+                'lens_protection',
+                'payment_method',
+                'product_id',
+                'product_quantity',
+                'net_total',
+                'paid_ammount',
+                'frame_size',
+                'color',
+                'order_status',
+            ]) as $key => $value
+        ) {
+            $order->$key = $value;
+        }
+
+        $order->save();
+
+           // ✅ Update only provided fields in Shipping Address
+    $shipping = ShippingAddress::where('order_id', $order->id)->firstOrFail();
+    foreach ($request->only([
+        'shipping_first_name', 'shipping_last_name', 'shipping_email',
+        'shipping_country', 'shipping_state', 'shipping_city',
+        'shipping_address', 'shipping_second_address',
+        'shipping_zip_postal_code', 'shipping_phone_number',
+        'shipping_additional_information'
+    ]) as $key => $value) {
+        $field = str_replace('shipping_', '', $key);
+        $shipping->$field = $value;
+    }
+    $shipping->save();
+
+    // ✅ Update only provided fields in Billing Address
+    $billing = BillingAddress::where('order_id', $order->id)->firstOrFail();
+    foreach ($request->only([
+        'billing_first_name', 'billing_last_name', 'billing_email',
+        'billing_country', 'billing_state', 'billing_city',
+        'billing_address', 'billing_second_address',
+        'billing_zip_postal_code', 'billing_phone_number'
+    ]) as $key => $value) {
+        $field = str_replace('billing_', '', $key);
+        $billing->$field = $value;
+    }
+    $billing->save();
+
+if ($request->has('update_points') && is_array($request->update_points)) {
+    // Purane points delete karo
+    ChangesPoints::where('order_id', $order->id)->delete();
+
+    // Naye points tabhi insert karo jab valid value ho
+    foreach ($request->update_points as $point) {
+        if (!is_null($point)) { // null check
+            ChangesPoints::create([
+                'order_id' => $order->id,
+                'point' => $point
+            ]);
+        }
+    }
+}
+
+
+    // ✅ Benefit deduction
+    if ($request->has('net_total')) {
+        $employee = Employee::findOrFail($employeeId);
+        $newDeductionAmount = $request->net_total;
+
+        $employee->benefit_amount += $order->net_total;
+        $deductionAmount = min($newDeductionAmount, $employee->benefit_amount);
+        $employee->benefit_amount -= $deductionAmount;
+        $employee->save();
+
+        Transaction::create([
+            'employee_id' => $employeeId,
+            'transaction_type' => 'debit',
+            'amount' => $newDeductionAmount,
+            'balance' => $employee->benefit_amount,
+            'description' => 'order update',
+        ]);
+    }
+
+
+        // Send email notification
+        $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+        if ($user) {
+            // Mail::to($user->email)->send(new OrderConfirmationMail($order));
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Order updated successfully.',
+            'order_id' => $order->id,
+            'prescription_id' => $pres->id,
+        ]);
+    }
+
+     public function update_tray_id(Request $request, $id)
+    {
+        try {
+            // Validate request
+            $validated = $request->validate([
+                'tray_id' => 'required|string',
+                'time' => 'required|string',
+            ]);
+
+            // Find and update order
+            $order = Order::findOrFail($id);
+            $order->tray_id = $validated['tray_id'] ?? null;
+            $order->time = $validated['time'] ?? null;
+            $order->order_status = 'Pending';
+            $order->save();
+
+            return $this->successResponse(
+                ['model' => 'order'],
+                'Tray ID and time updated successfully. Order status set to Pending.',
+                $order,
+                200
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->errorResponse(
+                ['model' => 'order'],
+                $e->getMessage(),
+                null,
+                422
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                ['model' => 'order'],
+                'Something went wrong while updating the order.',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+
+    public function updateuuOrder(Request $request, $id)
     {
         try {
             $request->validate([
