@@ -68,7 +68,7 @@ class ProductController extends Controller
                 $input['product_tags'] = implode(',', $request->product_tags);
             }
 
-        $product = Product::create($input);
+            $product = Product::create($input);
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $imagePath = $this->uploadImages($image, 'products'); // Uploading function ko call karna
@@ -114,6 +114,8 @@ class ProductController extends Controller
         try {
             $request->validate([
                 'product_name' => 'required|string|max:255',
+                'product_tags' => 'nullable|array',
+                'product_tags.*' => 'string',
                 'description' => 'required|string',
                 'category' => 'required|numeric',
                 'sub_category' => 'nullable',
@@ -162,8 +164,15 @@ class ProductController extends Controller
                 }
             }
 
-            // Update product fields
-            $product->update($request->except('images', 'image_ids', 'color', 'frame_sizes'));
+            // Prepare input and handle product_tags
+            $input = $request->except('images', 'image_ids', 'color', 'frame_sizes');
+
+            if ($request->has('product_tags') && is_array($request->product_tags)) {
+                $input['product_tags'] = implode(',', $request->product_tags);
+            }
+
+            // Update product
+            $product->update($input);
 
             // Handle updating the many-to-many relationships for colors and frame sizes
             if ($request->has('color')) {
@@ -242,14 +251,14 @@ class ProductController extends Controller
                         return $frameSize;
                     });
 
-                             // Convert tags to array of objects
-                if (!empty($product->product_tags)) {
-                    $product->product_tags = collect(explode(',', $product->product_tags))
-                        ->map(fn($tag) => ['name' => trim($tag)])
-                        ->toArray();
-                } else {
-                    $product->product_tags = [];
-                }
+                    // Convert tags to array of objects
+                    if (!empty($product->product_tags)) {
+                        $product->product_tags = collect(explode(',', $product->product_tags))
+                            ->map(fn($tag) => ['name' => trim($tag)])
+                            ->toArray();
+                    } else {
+                        $product->product_tags = [];
+                    }
 
 
                     return $product;
@@ -263,7 +272,7 @@ class ProductController extends Controller
         }
     }
 
-    
+
     public function getFullProductDetail($productId)
     {
         try {
@@ -324,9 +333,9 @@ class ProductController extends Controller
                 $product->frameSizes->map(function ($frameSize) {
                     unset($frameSize->pivot); // Remove the pivot attribute
                     return $frameSize;
-                }); 
+                });
 
-                                             // Convert tags to array of objects
+                // Convert tags to array of objects
                 if (!empty($product->product_tags)) {
                     $product->product_tags = collect(explode(',', $product->product_tags))
                         ->map(fn($tag) => ['name' => trim($tag)])
@@ -424,14 +433,14 @@ class ProductController extends Controller
                         return $frameSize;
                     });
 
-                                                 // Convert tags to array of objects
-                if (!empty($product->product_tags)) {
-                    $product->product_tags = collect(explode(',', $product->product_tags))
-                        ->map(fn($tag) => ['name' => trim($tag)])
-                        ->toArray();
-                } else {
-                    $product->product_tags = [];
-                }
+                    // Convert tags to array of objects
+                    if (!empty($product->product_tags)) {
+                        $product->product_tags = collect(explode(',', $product->product_tags))
+                            ->map(fn($tag) => ['name' => trim($tag)])
+                            ->toArray();
+                    } else {
+                        $product->product_tags = [];
+                    }
 
 
 
@@ -460,9 +469,27 @@ class ProductController extends Controller
             DB::beginTransaction();
 
             $product = Product::findOrFail($productId);
-            $product->product_status = 0;
-            $product->save();
 
+            // Delete related images from storage
+            $images = ProductImage::where('product_id', $product->product_id)->get();
+            foreach ($images as $image) {
+                $imagePath = public_path("projectimages/products/{$image->image_path}");
+                if (file_exists($imagePath)) {
+                    unlink($imagePath); // Delete image file
+                }
+                $image->delete(); // Delete image record from DB
+            }
+
+            $product->colors()->detach();
+            $product->frameSizes()->detach();
+
+
+            CompanyProduct::where('product_id', $product->product_id)->delete();
+            EmployeeProduct::where('product_id', $product->product_id)->delete();
+
+
+
+            $product->delete();
 
             DB::commit();
             return $this->successResponse(['model' => 'products'], 'Product deleted successfully', []);
@@ -471,6 +498,7 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
+
 
     public function getCategories()
     {
@@ -1225,27 +1253,27 @@ class ProductController extends Controller
 
 
     private function uploadImages($image, $directory = 'products')
-{
-    $destinationPath = public_path("projectimages/{$directory}");
+    {
+        $destinationPath = public_path("projectimages/{$directory}");
 
-    if (!file_exists($destinationPath)) {
-        mkdir($destinationPath, 0777, true);
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0777, true);
+        }
+
+        // Get original file extension
+        $extension = $image->getClientOriginalExtension();
+
+        // Generate a random unique name
+        $fileName = time() . Str::random(10) . '.' . $extension;
+
+        $image->move($destinationPath, $fileName);
+
+        if (file_exists("$destinationPath/$fileName")) {
+            return "{$fileName}";
+        } else {
+            dd("Image move failed: $fileName");
+        }
     }
-
-    // Get original file extension
-    $extension = $image->getClientOriginalExtension();
-
-    // Generate a random unique name
-    $fileName = time() . Str::random(10) . '.' . $extension;
-
-    $image->move($destinationPath, $fileName);
-
-    if (file_exists("$destinationPath/$fileName")) {
-        return "{$fileName}";
-    } else {
-        dd("Image move failed: $fileName");
-    }
-}
 
 
     public function unlinkImage($imagePath)

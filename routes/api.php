@@ -58,7 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/details/{productId}', [ProductController::class, 'getFullProductDetail']);
             Route::post('update', [ProductController::class, 'update']);
             Route::delete('delete/{productId}', [ProductController::class, 'deleteProduct']);
-            Route::post('/upload-products', [ProductController::class, 'upload'])->name('products.upload'); // here i am uploading products via excel sheet
+            Route::post('/upload-products', [ProductController::class, 'upload'])->name('products.upload');
         });
 
         Route::get('get-all-orders', [OrderController::class, 'getAllOrders']);
