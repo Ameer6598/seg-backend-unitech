@@ -12,18 +12,19 @@ use App\Models\Category;
 use App\Models\Material;
 use App\Models\FrameSize;
 use App\Traits\ApiResponse;
+use Illuminate\Support\Str;
 use App\Models\Manufacturer;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use App\Models\CompanyProduct;
 use App\Imports\ProductsImport;
 use App\Models\EmployeeProduct;
+use App\Models\ProductVariants;
 use App\Models\ProductSubcategory;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -42,44 +43,80 @@ class ProductController extends Controller
                 'product_tags.*' => 'string',
                 'description' => 'required|string',
                 'category' => 'required|numeric',
-                'sub_category' => 'nullable',
-                'color' => 'required|array', // array will come of this 
-                'color.*' => 'numeric', // ensuring each color id in the array is numeric
-                'frame_sizes' => 'required|array', // array will come of this 
-                'frame_sizes.*' => 'numeric', // ensuring each frame size id in the array is numeric 
-                'gender' => 'required',
+                'sub_category' => 'nullable|numeric',
+                'gender' => 'required|string',
                 'rim_type' => 'required|numeric',
                 'style' => 'required|numeric',
                 'material' => 'required|numeric',
+                'shape' => 'nullable|string',
+                'eye_size' => 'nullable|string',
+                'glasses_type' => 'nullable|string',
+                'lens_size' => 'nullable|string',
+                'temple_size' => 'nullable|string',
+                'bridge_size' => 'nullable|string',
                 'manufacturer_name' => 'required|numeric',
-                'price' => 'required|numeric|min:0',
-                'purchase_price' => 'required|numeric|min:0',
-                'available_quantity' => 'required|integer|min:0',
                 'product_status' => 'required|numeric',
-                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'frame_sizes' => 'required|array', // array will come of this 
+                'frame_sizes.*' => 'numeric', // ensuring each frame size id in the array is numeric 
+
+                'variants' => 'required|array',
+                'variants.*.color_name' => 'required|string',
+                'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.purchase_price' => 'required|numeric|min:0',
+                'variants.*.available_quantity' => 'required|integer|min:0',
+                'variants.*.vto' => 'nullable|string',
+                'variants.*.photo_config_name' => 'nullable|string',
+                'variants.*.images' => 'nullable|array',
+                'variants.*.images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+
+
             ]);
 
 
+            return $request;
 
             DB::beginTransaction();
 
-            $input = $request->except('images', 'color', 'frame_sizes');
-            if ($request->has('product_tags') && is_array($request->product_tags)) {
+            // Save main product
+            $input = $request->except('variants', 'product_tags', 'frame_sizes');
+            if ($request->has('product_tags')) {
                 $input['product_tags'] = implode(',', $request->product_tags);
             }
 
             $product = Product::create($input);
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
-                    $imagePath = $this->uploadImages($image, 'products'); // Uploading function ko call karna
-                    ProductImage::create([
-                        'product_id' => $product->product_id, // Yahan `product_id` set karein
-                        'image_path' => $imagePath,   // Image ka path store karein
-                    ]);
-                }
+            if ($request->has('frame_sizes')) {
+                $product->frameSizes()->attach($request->frame_sizes);
             }
-            if ($request->has('color')) {
-                $product->colors()->attach($request->color);
+
+
+            foreach ($request->variants as $variant) {
+                $variantData = [
+                    'product_id' => $product->product_id,
+                    'color_name' => $variant['color_name'],
+                    'price' => $variant['price'],
+                    'purchase_price' => $variant['purchase_price'],
+                    'available_quantity' => $variant['available_quantity'],
+                    'vto' => $variant['vto'] ?? null,
+                    'photo_config_name' => $variant['photo_config_name'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                $productVariant = ProductVariants::create($variantData);
+
+                // Upload and save images
+                if (!empty($variant['images'])) {
+                    foreach ($variant['images'] as $index => $image) {
+                        $imagePath = $this->uploadImages($image, 'products');
+                        ProductImage::create([
+                            'variant_id' => $productVariant->id,
+                            'image_path' => $imagePath,
+                            'is_primary' => $index === 0 ? 1 : 0,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
             }
 
             if ($request->has('frame_sizes')) {
