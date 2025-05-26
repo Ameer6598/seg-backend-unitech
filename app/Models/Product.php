@@ -29,8 +29,6 @@ class Product extends Model
         return $this->hasOne(ProductSubcategory::class, 'id', 'sub_category');
     }
 
-
-
     public function colors()
     {
         return $this->belongsToMany(Color::class, 'product_colors', 'product_id', 'color_id');
@@ -64,4 +62,13 @@ class Product extends Model
     {
         return $this->hasOne(Manufacturer::class, 'manufacturer_id', 'manufacturer_name');
     }
+
+    public function variants()
+    {
+     return $this->hasMany(ProductVariants::class,'product_id','product_id')->with('variant_images');
+        
+    }
+
+
+
 }

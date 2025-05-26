@@ -73,7 +73,7 @@ class ProductController extends Controller
             ]);
 
 
-            return $request;
+            $request;
 
             DB::beginTransaction();
 
@@ -236,7 +236,6 @@ class ProductController extends Controller
 
         try {
             $baseUrl = config('app.url');
-
             $mediaURL = env('BASE_URL');
 
             if ($productId) {
@@ -255,16 +254,15 @@ class ProductController extends Controller
                 ]);
             } else {
                 $products = Product::with([
-                    'images:id,product_id,image_path',
                     'productcategory:category_id,category_name',
                     'productsubcate:id,category_id,subcategory_name',
-                    'colors:color_id,color_name',
                     'frameSizes:frame_size_id,frame_size_name',
                     'rimtype:rim_type_id,rim_type_name',
                     'material:material_id,material_name',
                     'shape:shape_id,shape_name',
                     'style:style_id,style_name',
-                    'manufacturer'
+                    'manufacturer',
+                    'variants',
                 ])
 
                     ->get();
@@ -272,23 +270,17 @@ class ProductController extends Controller
 
                 // Add base URL to image paths
                 $products->map(function ($product) use ($mediaURL) {
-                    $product->images->map(function ($image) use ($mediaURL) {
-                        $image->image_path = $mediaURL . $image->image_path;
-                        return $image;
-                    });
 
-                    // Remove pivot from colors and frame sizes
-                    $product->colors->map(function ($color) {
-                        unset($color->pivot); // Remove the pivot attribute
-                        return $color;
-                    });
+                    unset($product->category);
+                    unset($product->sub_category);
+                    unset($product->rim_type);
+                    unset($product->manufacturer_name);
 
                     $product->frameSizes->map(function ($frameSize) {
                         unset($frameSize->pivot); // Remove the pivot attribute
                         return $frameSize;
                     });
 
-                    // Convert tags to array of objects
                     if (!empty($product->product_tags)) {
                         $product->product_tags = collect(explode(',', $product->product_tags))
                             ->map(fn($tag) => ['name' => trim($tag)])
@@ -296,6 +288,16 @@ class ProductController extends Controller
                     } else {
                         $product->product_tags = [];
                     }
+
+                    // ✅ Add base URL to variant_images
+                    foreach ($product->variants as $variant) {
+                        if (!empty($variant->variant_images)) {
+                            foreach ($variant->variant_images as $image) {
+                                $image->image_path = $mediaURL . $image->image_path;
+                            }
+                        }
+                    }
+
 
 
                     return $product;
@@ -330,17 +332,80 @@ class ProductController extends Controller
         }
     }
 
-    public function getCompanyProducts()
-    {
+    // public function getCompanyProducts()
+    // {
 
+    //     try {
+    //         $companyId = auth('sanctum')->user()->company_id;
+    //         $productIds = CompanyProduct::where('company_id', $companyId)
+    //             ->pluck('product_id'); // Just get array of product IDs
+
+    //         $mediaURL = env('BASE_URL');
+
+    //         $products = Product::with([
+    //             'images:id,product_id,image_path',
+    //             'productcategory:category_id,category_name',
+    //             'productsubcate:id,category_id,subcategory_name',
+    //             'colors:color_id,color_name',
+    //             'frameSizes:frame_size_id,frame_size_name',
+    //             'rimtype:rim_type_id,rim_type_name',
+    //             'material:material_id,material_name',
+    //             'shape:shape_id,shape_name',
+    //             'style:style_id,style_name',
+    //             'manufacturer'
+    //         ])
+    //             ->where('product_status', 1)
+    //             ->get();
+
+
+    //         $products->map(function ($product) use ($mediaURL) {
+    //             $product->images->map(function ($image) use ($mediaURL) {
+    //                 $image->image_path = $mediaURL . $image->image_path;
+    //                 return $image;
+    //             });
+
+    //             $product->colors->map(function ($color) {
+    //                 unset($color->pivot); // Remove the pivot attribute
+    //                 return $color;
+    //             });
+
+    //             $product->frameSizes->map(function ($frameSize) {
+    //                 unset($frameSize->pivot); // Remove the pivot attribute
+    //                 return $frameSize;
+    //             });
+
+    //             // Convert tags to array of objects
+    //             if (!empty($product->product_tags)) {
+    //                 $product->product_tags = collect(explode(',', $product->product_tags))
+    //                     ->map(fn($tag) => ['name' => trim($tag)])
+    //                     ->toArray();
+    //             } else {
+    //                 $product->product_tags = [];
+    //             }
+
+
+    //             return $product;
+    //         });
+
+    //         return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
+    //             'products' => $products,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
+    //     }
+    // }
+    public function getCompanyProducts(Request $request)
+    {
         try {
             $companyId = auth('sanctum')->user()->company_id;
             $productIds = CompanyProduct::where('company_id', $companyId)
-                ->pluck('product_id'); // Just get array of product IDs
+                ->pluck('product_id');
 
             $mediaURL = env('BASE_URL');
+            $page = $request->input('page', 1);
+            $perPage = $request->input('per_page', 10);
 
-            $products = Product::with([
+            $productsQuery = Product::with([
                 'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
                 'productsubcate:id,category_id,subcategory_name',
@@ -350,29 +415,33 @@ class ProductController extends Controller
                 'material:material_id,material_name',
                 'shape:shape_id,shape_name',
                 'style:style_id,style_name',
-                'manufacturer'
+                'manufacturer',
+                'variants.variant_images:id,variant_id,image_path'
             ])
                 ->where('product_status', 1)
-                ->get();
+                ->whereIn('product_id', $productIds);
 
-
-            $products->map(function ($product) use ($mediaURL) {
-                $product->images->map(function ($image) use ($mediaURL) {
+            $products = $productsQuery->paginate($perPage, ['*'], 'page', $page);
+            $products->getCollection()->transform(function ($product) use ($mediaURL) {
+                // Format images
+                $product->images->transform(function ($image) use ($mediaURL) {
                     $image->image_path = $mediaURL . $image->image_path;
                     return $image;
                 });
 
+                // Remove pivot from colors
                 $product->colors->map(function ($color) {
-                    unset($color->pivot); // Remove the pivot attribute
+                    unset($color->pivot);
                     return $color;
                 });
 
+                // Remove pivot from frameSizes
                 $product->frameSizes->map(function ($frameSize) {
-                    unset($frameSize->pivot); // Remove the pivot attribute
+                    unset($frameSize->pivot);
                     return $frameSize;
                 });
 
-                // Convert tags to array of objects
+                // Format product tags
                 if (!empty($product->product_tags)) {
                     $product->product_tags = collect(explode(',', $product->product_tags))
                         ->map(fn($tag) => ['name' => trim($tag)])
@@ -381,17 +450,127 @@ class ProductController extends Controller
                     $product->product_tags = [];
                 }
 
+                // Format variant_images
+                foreach ($product->variants as $variant) {
+                    if (!empty($variant->variant_images)) {
+                        foreach ($variant->variant_images as $image) {
+                            $image->image_path = $mediaURL . $image->image_path;
+                        }
+                    }
+                }
 
                 return $product;
             });
 
-            return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
+            return $this->successResponse(['model' => 'products'], 'Products retrieved successfully', [
                 'products' => $products,
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
+
+
+    // public function getemployeeProducts(Request $request)
+    // {
+    //     try {
+    //         $employeeId = auth('sanctum')->user()->employee_id;
+    //         $page = $request->input('page', 1);
+    //         $perPage = $request->input('per_page', 10);
+
+    //         $productName = $request->input('product_name');
+    //         $manufacturerName = $request->input('manufacturer_name');
+
+    //         $productIds = EmployeeProduct::where('employee_id', $employeeId)
+    //             ->pluck('product_id');
+
+    //         $mediaURL = env('BASE_URL');
+    //         $productsQuery = Product::with([
+    //             'images:id,product_id,image_path',
+    //             'productcategory:category_id,category_name',
+    //             'productsubcate:id,category_id,subcategory_name',
+    //             'colors:color_id,color_name',
+    //             'frameSizes:frame_size_id,frame_size_name',
+    //             'rimtype:rim_type_id,rim_type_name',
+    //             'material:material_id,material_name',
+    //             'shape:shape_id,shape_name',
+
+    //             'style:style_id,style_name',
+    //             'manufacturer'
+    //         ])
+    //             ->where('product_status', 1)
+    //             ->whereIn('product_id', $productIds);
+
+
+    //         $isFiltered = false;
+
+    //         if ($productName) {
+    //             $productsQuery->where('product_name', 'LIKE', "%$productName%");
+    //             $isFiltered = true;
+    //         }
+
+    //         if ($manufacturerName) {
+    //             $productsQuery->where('manufacturer_name', $manufacturerName);
+    //             $isFiltered = true;
+    //         }
+
+    //         if ($isFiltered) {
+    //             $products = $productsQuery->get();
+    //             $products->transform(function ($product) use ($mediaURL) {
+    //                 $product->images->transform(function ($image) use ($mediaURL) {
+    //                     $image->image_path = $mediaURL . $image->image_path;
+    //                     return $image;
+    //                 });
+    //                 $product->colors->map(function ($color) {
+    //                     unset($color->pivot); // Remove the pivot attribute
+    //                     return $color;
+    //                 });
+    //                 $product->frameSizes->map(function ($frameSize) {
+    //                     unset($frameSize->pivot); // Remove the pivot attribute
+    //                     return $frameSize;
+    //                 });
+    //                 return $product;
+    //             });
+    //         } else {
+    //             $products = $productsQuery->paginate($perPage, ['*'], 'page', $page);
+    //             $products->getCollection()->transform(function ($product) use ($mediaURL) {
+    //                 $product->images->transform(function ($image) use ($mediaURL) {
+    //                     $image->image_path = $mediaURL . $image->image_path;
+    //                     return $image;
+    //                 });
+    //                 $product->colors->map(function ($color) {
+    //                     unset($color->pivot); // Remove the pivot attribute
+    //                     return $color;
+    //                 });
+
+    //                 $product->frameSizes->map(function ($frameSize) {
+    //                     unset($frameSize->pivot); // Remove the pivot attribute
+    //                     return $frameSize;
+    //                 });
+
+    //                 // Convert tags to array of objects
+    //                 if (!empty($product->product_tags)) {
+    //                     $product->product_tags = collect(explode(',', $product->product_tags))
+    //                         ->map(fn($tag) => ['name' => trim($tag)])
+    //                         ->toArray();
+    //                 } else {
+    //                     $product->product_tags = [];
+    //                 }
+
+
+
+    //                 return $product;
+    //             });
+    //         }
+
+
+    //         return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
+    //             'products' => $products,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
+    //     }
+    // }
 
     public function getemployeeProducts(Request $request)
     {
@@ -407,22 +586,20 @@ class ProductController extends Controller
                 ->pluck('product_id');
 
             $mediaURL = env('BASE_URL');
+
             $productsQuery = Product::with([
-                'images:id,product_id,image_path',
                 'productcategory:category_id,category_name',
                 'productsubcate:id,category_id,subcategory_name',
-                'colors:color_id,color_name',
                 'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
                 'material:material_id,material_name',
                 'shape:shape_id,shape_name',
-
                 'style:style_id,style_name',
-                'manufacturer'
+                'manufacturer',
+                'variants.variant_images', // ensure this relation exists
             ])
                 ->where('product_status', 1)
                 ->whereIn('product_id', $productIds);
-
 
             $isFiltered = false;
 
@@ -436,55 +613,50 @@ class ProductController extends Controller
                 $isFiltered = true;
             }
 
-            if ($isFiltered) {
-                $products = $productsQuery->get();
-                $products->transform(function ($product) use ($mediaURL) {
-                    $product->images->transform(function ($image) use ($mediaURL) {
-                        $image->image_path = $mediaURL . $image->image_path;
-                        return $image;
-                    });
-                    $product->colors->map(function ($color) {
-                        unset($color->pivot); // Remove the pivot attribute
-                        return $color;
-                    });
-                    $product->frameSizes->map(function ($frameSize) {
-                        unset($frameSize->pivot); // Remove the pivot attribute
-                        return $frameSize;
-                    });
-                    return $product;
+            $products = $isFiltered
+                ? $productsQuery->get()
+                : $productsQuery->paginate($perPage, ['*'], 'page', $page);
+
+            // Map and format each product
+            $collection = $isFiltered ? $products : $products->getCollection();
+
+            $collection->transform(function ($product) use ($mediaURL) {
+
+                // Remove unnecessary attributes if present
+                unset($product->category);
+                unset($product->sub_category);
+                unset($product->rim_type);
+                unset($product->manufacturer_name);
+
+                $product->frameSizes->map(function ($frameSize) {
+                    unset($frameSize->pivot);
+                    return $frameSize;
                 });
-            } else {
-                $products = $productsQuery->paginate($perPage, ['*'], 'page', $page);
-                $products->getCollection()->transform(function ($product) use ($mediaURL) {
-                    $product->images->transform(function ($image) use ($mediaURL) {
-                        $image->image_path = $mediaURL . $image->image_path;
-                        return $image;
-                    });
-                    $product->colors->map(function ($color) {
-                        unset($color->pivot); // Remove the pivot attribute
-                        return $color;
-                    });
 
-                    $product->frameSizes->map(function ($frameSize) {
-                        unset($frameSize->pivot); // Remove the pivot attribute
-                        return $frameSize;
-                    });
+                // Format tags
+                if (!empty($product->product_tags)) {
+                    $product->product_tags = collect(explode(',', $product->product_tags))
+                        ->map(fn($tag) => ['name' => trim($tag)])
+                        ->toArray();
+                } else {
+                    $product->product_tags = [];
+                }
 
-                    // Convert tags to array of objects
-                    if (!empty($product->product_tags)) {
-                        $product->product_tags = collect(explode(',', $product->product_tags))
-                            ->map(fn($tag) => ['name' => trim($tag)])
-                            ->toArray();
-                    } else {
-                        $product->product_tags = [];
+                // Add media URL to variant images
+                foreach ($product->variants as $variant) {
+                    if (!empty($variant->variant_images)) {
+                        foreach ($variant->variant_images as $image) {
+                            $image->image_path = $mediaURL . $image->image_path;
+                        }
                     }
+                }
 
+                return $product;
+            });
 
-
-                    return $product;
-                });
+            if (!$isFiltered) {
+                $products->setCollection($collection);
             }
-
 
             return $this->successResponse(['model' => 'products'], 'Product retrieved successfully', [
                 'products' => $products,
@@ -496,9 +668,7 @@ class ProductController extends Controller
 
 
 
-    // public function getManufacturers(){
 
-    // }
 
     public function deleteProduct($productId)
     {
