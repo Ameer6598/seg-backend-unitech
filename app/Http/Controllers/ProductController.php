@@ -67,7 +67,7 @@ class ProductController extends Controller
                 'variants.*.vto' => 'nullable|string',
                 'variants.*.photo_config_name' => 'nullable|string',
                 'variants.*.images' => 'nullable|array',
-                'variants.*.images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'variants.*.images.*' => 'nullable|image|max:2048',
 
 
             ]);
@@ -146,8 +146,9 @@ class ProductController extends Controller
         }
     }
 
-    public function update(Request $request)
+    public function update(Request $request, $id)
     {
+
         try {
             $request->validate([
                 'product_name' => 'required|string|max:255',
@@ -155,73 +156,135 @@ class ProductController extends Controller
                 'product_tags.*' => 'string',
                 'description' => 'required|string',
                 'category' => 'required|numeric',
-                'sub_category' => 'nullable',
-                'color' => 'required|array', // Array validation for colors
-                'color.*' => 'numeric', // Ensuring each color id is numeric
-                'frame_sizes' => 'required|array', // Array validation for frame_sizes
-                'frame_sizes.*' => 'numeric', // Ensuring each frame size id is numeric
-                'gender' => 'required',
+                'sub_category' => 'nullable|numeric',
+                'gender' => 'required|string',
                 'rim_type' => 'required|numeric',
                 'style' => 'required|numeric',
                 'material' => 'required|numeric',
+                'shape' => 'nullable|string',
+                'eye_size' => 'nullable|string',
+                'glasses_type' => 'nullable|string',
+                'lens_size' => 'nullable|string',
+                'temple_size' => 'nullable|string',
+                'bridge_size' => 'nullable|string',
                 'manufacturer_name' => 'required|numeric',
-                'price' => 'required|numeric|min:0',
-                'purchase_price' => 'required|numeric|min:0',
-                'available_quantity' => 'required|integer|min:0',
                 'product_status' => 'required|numeric',
-                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'product_id' => 'required',
-                'image_ids' => 'nullable|array',
-                'image_ids.*' => 'nullable|numeric',
+                'frame_sizes' => 'required|array',
+                'frame_sizes.*' => 'numeric',
+                'variants' => 'required|array',
+                'variants.*.id' => 'nullable|numeric',
+                'variants.*.color_name' => 'required|string',
+                'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.purchase_price' => 'required|numeric|min:0',
+                'variants.*.available_quantity' => 'required|integer|min:0',
+                'variants.*.vto' => 'nullable|string',
+                'variants.*.photo_config_name' => 'nullable|string',
+                'variants.*.images' => 'nullable|array',
+                'variants.*.images.*' => 'nullable|image|max:2048',
+                'variants.*.deleted_images' => 'nullable|array',
+                'variants.*.deleted_images.*' => 'numeric',
             ]);
 
             DB::beginTransaction();
 
-            $product = Product::findOrFail($request->product_id);
+            $product = Product::findOrFail($id);
 
-            // Remove images based on the image_ids
-            if ($request->has('image_ids')) {
-                foreach ($request->image_ids as $imageId) {
-                    $image = ProductImage::find($imageId);
-                    if ($image) {
-                        $this->unlinkImage($image->image_path); // Unlink the image from the filesystem
-                        $image->delete(); // Remove the image from the database
+            // Update main product
+            $input = $request->except('variants', 'product_tags', 'frame_sizes');
+            if ($request->has('product_tags')) {
+                $input['product_tags'] = implode(',', $request->product_tags);
+            }
+
+            $product->update($input);
+
+            // Update frame sizes
+            if ($request->has('frame_sizes')) {
+                $product->frameSizes()->sync($request->frame_sizes);
+            }
+
+            // Get existing variant IDs to detect which ones to delete
+            $existingVariantIds = $product->variants->pluck('id')->toArray();
+            $updatedVariantIds = [];
+
+            if (!empty($request->variants) && is_array($request->variants)) {
+                foreach ($request->variants as $variant) {
+                    $variantData = [
+                        'color_name' => $variant['color_name'],
+                        'price' => $variant['price'],
+                        'purchase_price' => $variant['purchase_price'],
+                        'available_quantity' => $variant['available_quantity'],
+                        'vto' => $variant['vto'] ?? null,
+                        'photo_config_name' => $variant['photo_config_name'] ?? null,
+                        'updated_at' => now(),
+                    ];
+
+                    if (isset($variant['id'])) {
+                        // Update existing variant
+                        $productVariant = ProductVariants::where('id', $variant['id'])
+                            ->where('product_id', $product->product_id)
+                            ->firstOrFail();
+
+                        $productVariant->update($variantData);
+                        $updatedVariantIds[] = $variant['id'];
+                    } else {
+                        // Create new variant
+                        $variantData['product_id'] = $product->product_id;
+                        $variantData['created_at'] = now();
+                        $productVariant = ProductVariants::create($variantData);
+                        $updatedVariantIds[] = $productVariant->id;
+                    }
+
+                    // Handle image deletions
+                    if (!empty($variant['deleted_images'])) {
+                        $imagesToDelete = ProductImage::where('variant_id', $productVariant->id)
+                            ->whereIn('id', $variant['deleted_images'])
+                            ->get();
+
+                        foreach ($imagesToDelete as $image) {
+                            $fullPath = public_path('projectimages/products/' . $image->image_path);
+                            if (file_exists($fullPath)) {
+                                unlink($fullPath);
+                            }
+                            $image->delete();
+                        }
+                    }
+
+                    // Upload and save new images
+                    if (isset($variant['images']) && is_array($variant['images'])) {
+                        foreach ($variant['images'] as $index => $image) {
+                            if ($image instanceof \Illuminate\Http\UploadedFile && $image->isValid()) {
+                                $imagePath = $this->uploadImages($image, 'products');
+                                if ($imagePath) {
+                                    ProductImage::create([
+                                        'variant_id' => $productVariant->id,
+                                        'image_path' => $imagePath,
+                                        'is_primary' => $index === 0 && $productVariant->variant_images()->count() === 0 ? 1 : 0,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ]);
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // Upload new images
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
-                    $imagePath = $this->uploadImages($image, 'products'); // Upload the image
-                    ProductImage::create([
-                        'product_id' => $product->product_id,
-                        'image_path' => $imagePath,
-                    ]);
+            // Delete variants that weren't in the updated list
+            $variantsToDelete = array_diff($existingVariantIds, $updatedVariantIds);
+            if (!empty($variantsToDelete)) {
+                $variants = ProductVariants::whereIn('id', $variantsToDelete)->get();
+                foreach ($variants as $variant) {
+                    if (!empty($variant->images)) {
+                        foreach ($variant->images as $image) {
+                            Storage::delete($image->image_path);
+                            $image->delete();
+                        }
+                    }
+                    $variant->delete();
                 }
             }
 
-            // Prepare input and handle product_tags
-            $input = $request->except('images', 'image_ids', 'color', 'frame_sizes');
-
-            if ($request->has('product_tags') && is_array($request->product_tags)) {
-                $input['product_tags'] = implode(',', $request->product_tags);
-            }
-
-            // Update product
-            $product->update($input);
-
-            // Handle updating the many-to-many relationships for colors and frame sizes
-            if ($request->has('color')) {
-                $product->colors()->sync($request->color); // Use sync to update the colors
-            }
-
-            if ($request->has('frame_sizes')) {
-                $product->frameSizes()->sync($request->frame_sizes); // Use sync to update the frame sizes
-            }
-
             DB::commit();
-
             return $this->successResponse(['model' => 'products'], 'Product updated successfully', [
                 'product' => $product,
             ]);
@@ -230,6 +293,8 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
+
+
 
     public function getProductOrAll($productId = null)
     {
@@ -394,63 +459,49 @@ class ProductController extends Controller
     //         return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
     //     }
     // }
-    public function getCompanyProducts(Request $request)
+    public function getCompanyProducts()
     {
         try {
             $companyId = auth('sanctum')->user()->company_id;
-            $productIds = CompanyProduct::where('company_id', $companyId)
-                ->pluck('product_id');
-
+            $baseUrl = config('app.url');
             $mediaURL = env('BASE_URL');
-            $page = $request->input('page', 1);
-            $perPage = $request->input('per_page', 10);
 
-            $productsQuery = Product::with([
-                'images:id,product_id,image_path',
+            $productIds = CompanyProduct::where('company_id', $companyId)
+                ->pluck('product_id'); // Get array of product IDs
+
+            $products = Product::with([
+
                 'productcategory:category_id,category_name',
                 'productsubcate:id,category_id,subcategory_name',
-                'colors:color_id,color_name',
                 'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
                 'material:material_id,material_name',
                 'shape:shape_id,shape_name',
                 'style:style_id,style_name',
                 'manufacturer',
-                'variants.variant_images:id,variant_id,image_path'
+                'variants'
             ])
+                ->whereIn('product_id', $productIds)
                 ->where('product_status', 1)
-                ->whereIn('product_id', $productIds);
+                ->get();
 
-            $products = $productsQuery->paginate($perPage, ['*'], 'page', $page);
-            $products->getCollection()->transform(function ($product) use ($mediaURL) {
-                // Format images
-                $product->images->transform(function ($image) use ($mediaURL) {
-                    $image->image_path = $mediaURL . $image->image_path;
-                    return $image;
-                });
+            // Process products and add base URL to image paths
+            $products->map(function ($product) use ($mediaURL) {
+                // Remove unnecessary attributes
+                unset($product->category);
+                unset($product->sub_category);
+                unset($product->rim_type);
+                unset($product->manufacturer_name);
 
-                // Remove pivot from colors
-                $product->colors->map(function ($color) {
-                    unset($color->pivot);
-                    return $color;
-                });
 
-                // Remove pivot from frameSizes
+                // Process frame sizes
                 $product->frameSizes->map(function ($frameSize) {
-                    unset($frameSize->pivot);
+                    unset($frameSize->pivot); // Remove the pivot attribute
                     return $frameSize;
                 });
 
-                // Format product tags
-                if (!empty($product->product_tags)) {
-                    $product->product_tags = collect(explode(',', $product->product_tags))
-                        ->map(fn($tag) => ['name' => trim($tag)])
-                        ->toArray();
-                } else {
-                    $product->product_tags = [];
-                }
 
-                // Format variant_images
+                // Process variant images
                 foreach ($product->variants as $variant) {
                     if (!empty($variant->variant_images)) {
                         foreach ($variant->variant_images as $image) {
@@ -459,10 +510,19 @@ class ProductController extends Controller
                     }
                 }
 
+                // Convert tags to array of objects
+                if (!empty($product->product_tags)) {
+                    $product->product_tags = collect(explode(',', $product->product_tags))
+                        ->map(fn($tag) => ['name' => trim($tag)])
+                        ->toArray();
+                } else {
+                    $product->product_tags = [];
+                }
+
                 return $product;
             });
 
-            return $this->successResponse(['model' => 'products'], 'Products retrieved successfully', [
+            return $this->successResponse(['model' => 'products'], 'Company products retrieved successfully', [
                 'products' => $products,
             ]);
         } catch (\Exception $e) {
@@ -677,25 +737,32 @@ class ProductController extends Controller
 
             $product = Product::findOrFail($productId);
 
-            // Delete related images from storage
-            $images = ProductImage::where('product_id', $product->product_id)->get();
-            foreach ($images as $image) {
-                $imagePath = public_path("projectimages/products/{$image->image_path}");
-                if (file_exists($imagePath)) {
-                    unlink($imagePath); // Delete image file
-                }
-                $image->delete(); // Delete image record from DB
-            }
-
-            $product->colors()->detach();
             $product->frameSizes()->detach();
-
 
             CompanyProduct::where('product_id', $product->product_id)->delete();
             EmployeeProduct::where('product_id', $product->product_id)->delete();
 
+            $variants = ProductVariants::where('product_id', $product->product_id)->get();
 
+            foreach ($variants as $variant) {
 
+                $images = ProductImage::where('variant_id', $variant->id)->get();
+
+                foreach ($images as $image) {
+                    $fullPath = public_path('projectimages/products/' . $image->image_path);
+
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                    }
+
+                    $image->delete();
+                }
+
+                // Delete variant
+                $variant->delete();
+            }
+
+            // Finally delete product
             $product->delete();
 
             DB::commit();
@@ -705,6 +772,7 @@ class ProductController extends Controller
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
+
 
 
     public function getCategories()
