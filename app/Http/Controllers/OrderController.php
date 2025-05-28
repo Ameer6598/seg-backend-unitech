@@ -11,6 +11,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use App\Models\ChangesPoints;
 use App\Models\BillingAddress;
+use App\Models\ProductVariants;
 use App\Models\ShippingAddress;
 use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +35,7 @@ class OrderController extends Controller
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'required|string',
             'order_type' => 'required|string|max:255',
-            
+
             'lense_material' => 'required|string|max:255',
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
@@ -65,7 +66,7 @@ class OrderController extends Controller
             'payment_method' => 'required|string|max:100',
             'product_id' => 'required|integer',
 
-            'color' => 'required|integer ',
+            'variant_id' => 'required|integer ',
             'frame_size' => 'required',
 
             'product_quantity' => 'required|integer|min:1',
@@ -139,7 +140,7 @@ class OrderController extends Controller
         $order->fill($request->only([
             'blue_light_protection',
             'order_type',
-           
+
             'lense_material',
             'scratch_coating',
             'lens_tint',
@@ -150,7 +151,7 @@ class OrderController extends Controller
             'net_total',
             'paid_ammount',
             'frame_size',
-            'color'
+            'variant_id'
         ]));
         $order->order_status = 'pending'; // default status
         $order->order_confirmation_number = strtoupper(uniqid('CONF'));
@@ -242,7 +243,7 @@ class OrderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'required|string',
-            'order_type' => 'required|string|max:255',           
+            'order_type' => 'required|string|max:255',
             'lense_material' => 'required|string|max:255',
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
@@ -250,7 +251,7 @@ class OrderController extends Controller
 
             'payment_method' => 'required|string|max:100',
             'product_id' => 'required|integer',
-            'color' => 'required|integer ',
+            'variant_id' => 'required|integer ',
             'frame_size' => 'required',
 
             'product_quantity' => 'required|integer|min:1',
@@ -326,7 +327,7 @@ class OrderController extends Controller
             'net_total',
             'paid_ammount',
             'frame_size',
-            'color'
+            'variant_id'
         ]));
 
         $order->order_status = 'pending';
@@ -471,34 +472,26 @@ class OrderController extends Controller
 
     public function getEmployeeOrders(Request $request)
     {
-
+        $baseUrl = env('BASE_URL'); // Assuming this is your media URL for images
         $EmplyeeId = auth('sanctum')->user()->employee_id;
 
         $orders = Order::where('employee_id', $EmplyeeId)
-            ->with('employee_data:employee_id,name as employee_name,email')
-            ->with('company_data:company_id,name as company_name,email')
-            ->with('orderPoints:order_id,point')
-            ->with('prescription')
-            ->with('shipping_address')
-            ->with('billing_address')
-            ->with('blue_light_protection:id,title')
-            ->with('lense_material:id,title')
-            ->with('scratch_coating:id,title')
-            ->with('lens_tint:id,title')
-            ->with('lens_protection:id,title')
-            ->with('color:color_id,color_name')
-            ->with('frame_size:frame_size_id,frame_size_name')
-            ->with('product:product_id,product_name')
-            ->get();
-
-
-        $orders->transform(function ($order) {
-            $order->order_points = $order->orderPoints->pluck('point')->toArray();
-            unset($order->orderPoints); // Optional: hide original relation
-            unset($order->product_id);
-
-            return $order;
-        });
+            ->with([
+                'employee_data:employee_id,name as employee_name,email',
+                'company_data:company_id,name as company_name,email',
+                'orderPoints:order_id,point',
+                'prescription',
+                'shipping_address',
+                'billing_address',
+                'blue_light_protection:id,title',
+                'lense_material:id,title',
+                'scratch_coating:id,title',
+                'lens_tint:id,title',
+                'lens_protection:id,title',
+                'frame_size:frame_size_id,frame_size_name',
+                'product:product_id,product_name',
+                'variant',
+            ])->get();
 
         return response()->json([
             'status' => true,
@@ -506,36 +499,32 @@ class OrderController extends Controller
             'data' => $orders
         ]);
     }
-
     public function getCompanyOrders(Request $request)
     {
-
+        $baseUrl = env('BASE_URL'); // Assuming this is your media URL for images
         $CompanyId = auth('sanctum')->user()->company_id;
 
         $orders = Order::where('company_id', $CompanyId)
-            ->with('employee_data:employee_id,name as employee_name,email')
-            ->with('company_data:company_id,name as company_name,email')
-            ->with('orderPoints:order_id,point')
-            ->with('prescription')
-            ->with('shipping_address')
-            ->with('billing_address')
-            ->with('blue_light_protection:id,title')
-            ->with('lense_material:id,title')
-            ->with('scratch_coating:id,title')
-            ->with('lens_tint:id,title')
-            ->with('lens_protection:id,title')
-            ->with('color:color_id,color_name')
-            ->with('frame_size:frame_size_id,frame_size_name')
-            ->with('product:product_id,product_name')
-            ->get();
+            ->with([
+                'employee_data:employee_id,name as employee_name,email',
+                'company_data:company_id,name as company_name,email',
+                'orderPoints:order_id,point',
+                'prescription',
+                'shipping_address',
+                'billing_address',
+                'blue_light_protection:id,title',
+                'lense_material:id,title',
+                'scratch_coating:id,title',
+                'lens_tint:id,title',
+                'lens_protection:id,title',
+                'frame_size:frame_size_id,frame_size_name',
+                'product:product_id,product_name',
+                'variant',
+            ])->get();
 
 
-        $orders->transform(function ($order) {
-            $order->order_points = $order->orderPoints->pluck('point')->toArray();
-            unset($order->orderPoints); // Optional: hide original relation
-            unset($order->product_id);
-            return $order;
-        });
+
+
 
         return response()->json([
             'status' => true,
@@ -544,32 +533,27 @@ class OrderController extends Controller
         ]);
     }
 
-    public function getAllOrders(request $request)
+    public function getAllOrders(Request $request)
     {
+        $baseUrl = env('BASE_URL');
 
-        $orders = Order::with('employee_data:employee_id,name as employee_name,email')
-            ->with('company_data:company_id,name as company_name,email')
-            ->with('orderPoints:order_id,point')
-            ->with('prescription')
-            ->with('shipping_address')
-            ->with('billing_address')
-            ->with('blue_light_protection:id,title')
-            ->with('lense_material:id,title')
-            ->with('scratch_coating:id,title')
-            ->with('lens_tint:id,title')
-            ->with('lens_protection:id,title')
-            ->with('color:color_id,color_name')
-            ->with('frame_size:frame_size_id,frame_size_name')
-            ->with('product:product_id,product_name')
-            ->get();
+        $orders = Order::with([
+            'employee_data:employee_id,name as employee_name,email',
+            'company_data:company_id,name as company_name,email',
+            'orderPoints:order_id,point',
+            'prescription',
+            'shipping_address',
+            'billing_address',
+            'blue_light_protection:id,title',
+            'lense_material:id,title',
+            'scratch_coating:id,title',
+            'lens_tint:id,title',
+            'lens_protection:id,title',
+            'frame_size:frame_size_id,frame_size_name',
+            'product:product_id,product_name',
+            'variant'
+        ])->get();
 
-
-        $orders->transform(function ($order) {
-            $order->order_points = $order->orderPoints->pluck('point')->toArray();
-            unset($order->orderPoints); // Optional: hide original relation
-            unset($order->product_id);
-            return $order;
-        });
 
 
         return response()->json([
@@ -578,6 +562,9 @@ class OrderController extends Controller
             'data' => $orders
         ]);
     }
+
+
+
 
     public function updateOrderStatus(Request $request)
     {
@@ -607,7 +594,7 @@ class OrderController extends Controller
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'nullable|string',
             'order_type' => 'nullable|string|max:255',
-            
+
             'lense_material' => 'nullable|string|max:255',
             'scratch_coating' => 'nullable',
             'lens_tint' => 'nullable|string|max:255',
@@ -738,67 +725,83 @@ class OrderController extends Controller
 
         $order->save();
 
-           // ✅ Update only provided fields in Shipping Address
-    $shipping = ShippingAddress::where('order_id', $order->id)->firstOrFail();
-    foreach ($request->only([
-        'shipping_first_name', 'shipping_last_name', 'shipping_email',
-        'shipping_country', 'shipping_state', 'shipping_city',
-        'shipping_address', 'shipping_second_address',
-        'shipping_zip_postal_code', 'shipping_phone_number',
-        'shipping_additional_information'
-    ]) as $key => $value) {
-        $field = str_replace('shipping_', '', $key);
-        $shipping->$field = $value;
-    }
-    $shipping->save();
+        // ✅ Update only provided fields in Shipping Address
+        $shipping = ShippingAddress::where('order_id', $order->id)->firstOrFail();
+        foreach (
+            $request->only([
+                'shipping_first_name',
+                'shipping_last_name',
+                'shipping_email',
+                'shipping_country',
+                'shipping_state',
+                'shipping_city',
+                'shipping_address',
+                'shipping_second_address',
+                'shipping_zip_postal_code',
+                'shipping_phone_number',
+                'shipping_additional_information'
+            ]) as $key => $value
+        ) {
+            $field = str_replace('shipping_', '', $key);
+            $shipping->$field = $value;
+        }
+        $shipping->save();
 
-    // ✅ Update only provided fields in Billing Address
-    $billing = BillingAddress::where('order_id', $order->id)->firstOrFail();
-    foreach ($request->only([
-        'billing_first_name', 'billing_last_name', 'billing_email',
-        'billing_country', 'billing_state', 'billing_city',
-        'billing_address', 'billing_second_address',
-        'billing_zip_postal_code', 'billing_phone_number'
-    ]) as $key => $value) {
-        $field = str_replace('billing_', '', $key);
-        $billing->$field = $value;
-    }
-    $billing->save();
+        // ✅ Update only provided fields in Billing Address
+        $billing = BillingAddress::where('order_id', $order->id)->firstOrFail();
+        foreach (
+            $request->only([
+                'billing_first_name',
+                'billing_last_name',
+                'billing_email',
+                'billing_country',
+                'billing_state',
+                'billing_city',
+                'billing_address',
+                'billing_second_address',
+                'billing_zip_postal_code',
+                'billing_phone_number'
+            ]) as $key => $value
+        ) {
+            $field = str_replace('billing_', '', $key);
+            $billing->$field = $value;
+        }
+        $billing->save();
 
-if ($request->has('update_points') && is_array($request->update_points)) {
-    // Purane points delete karo
-    ChangesPoints::where('order_id', $order->id)->delete();
+        if ($request->has('update_points') && is_array($request->update_points)) {
+            // Purane points delete karo
+            ChangesPoints::where('order_id', $order->id)->delete();
 
-    // Naye points tabhi insert karo jab valid value ho
-    foreach ($request->update_points as $point) {
-        if (!is_null($point)) { // null check
-            ChangesPoints::create([
-                'order_id' => $order->id,
-                'point' => $point
+            // Naye points tabhi insert karo jab valid value ho
+            foreach ($request->update_points as $point) {
+                if (!is_null($point)) { // null check
+                    ChangesPoints::create([
+                        'order_id' => $order->id,
+                        'point' => $point
+                    ]);
+                }
+            }
+        }
+
+
+        // ✅ Benefit deduction
+        if ($request->has('net_total')) {
+            $employee = Employee::findOrFail($employeeId);
+            $newDeductionAmount = $request->net_total;
+
+            $employee->benefit_amount += $order->net_total;
+            $deductionAmount = min($newDeductionAmount, $employee->benefit_amount);
+            $employee->benefit_amount -= $deductionAmount;
+            $employee->save();
+
+            Transaction::create([
+                'employee_id' => $employeeId,
+                'transaction_type' => 'debit',
+                'amount' => $newDeductionAmount,
+                'balance' => $employee->benefit_amount,
+                'description' => 'order update',
             ]);
         }
-    }
-}
-
-
-    // ✅ Benefit deduction
-    if ($request->has('net_total')) {
-        $employee = Employee::findOrFail($employeeId);
-        $newDeductionAmount = $request->net_total;
-
-        $employee->benefit_amount += $order->net_total;
-        $deductionAmount = min($newDeductionAmount, $employee->benefit_amount);
-        $employee->benefit_amount -= $deductionAmount;
-        $employee->save();
-
-        Transaction::create([
-            'employee_id' => $employeeId,
-            'transaction_type' => 'debit',
-            'amount' => $newDeductionAmount,
-            'balance' => $employee->benefit_amount,
-            'description' => 'order update',
-        ]);
-    }
 
 
         // Send email notification
@@ -815,7 +818,7 @@ if ($request->has('update_points') && is_array($request->update_points)) {
         ]);
     }
 
-     public function update_tray_id(Request $request, $id)
+    public function update_tray_id(Request $request, $id)
     {
         try {
             // Validate request

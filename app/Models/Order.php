@@ -72,14 +72,17 @@ class Order extends Model
     }
 
     public function frame_size(){
-        return $this->hasOne(FrameSize::class,'frame_size_id','color');  
+        return $this->hasOne(FrameSize::class,'frame_size_id','frame_size');  
     }
 
     public function product(){
-        return $this->hasOne(Product::class,'product_id','product_id')->with('images:id,product_id,image_path');  
+        return $this->hasOne(Product::class,'product_id','product_id');  
 
     }
-
+     public function variant()
+    {
+        return $this->hasOne(ProductVariants::class, 'id', 'variant_id')->with('variant_images');
+    }
 
 
 }
