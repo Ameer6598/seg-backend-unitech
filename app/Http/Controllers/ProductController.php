@@ -84,10 +84,6 @@ class ProductController extends Controller
             }
 
             $product = Product::create($input);
-            if ($request->has('frame_sizes')) {
-                $product->frameSizes()->attach($request->frame_sizes);
-            }
-
 
             foreach ($request->variants as $variant) {
                 $variantData = [
