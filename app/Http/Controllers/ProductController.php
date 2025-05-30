@@ -54,6 +54,16 @@ class ProductController extends Controller
                 'lens_size' => 'nullable|string',
                 'temple_size' => 'nullable|string',
                 'bridge_size' => 'nullable|string',
+                
+                'frame_features' => 'nullable|string',
+                'frame_shape' => 'nullable|string',
+                'prescriptions_availabel' => 'nullable|string',
+                'upc' => 'nullable|string',
+                'sku' => 'nullable|string',
+                'lens_width' => 'nullable|string',
+                'lens_height' => 'nullable|string',
+                'frame_width' => 'nullable|string',
+
                 'manufacturer_name' => 'required|numeric',
                 'product_status' => 'required|numeric',
                 'frame_sizes' => 'required|array', // array will come of this 
@@ -163,6 +173,19 @@ class ProductController extends Controller
                 'lens_size' => 'nullable|string',
                 'temple_size' => 'nullable|string',
                 'bridge_size' => 'nullable|string',
+                
+                'frame_features' => 'nullable|string',
+                'frame_shape' => 'nullable|string',
+                'prescriptions_availabel' => 'nullable|string',
+                'upc' => 'nullable|string',
+                'sku' => 'nullable|string',
+                'lens_width' => 'nullable|string',
+                'lens_height' => 'nullable|string',
+                'frame_width' => 'nullable|string',
+
+
+
+
                 'manufacturer_name' => 'required|numeric',
                 'product_status' => 'required|numeric',
                 'frame_sizes' => 'required|array',

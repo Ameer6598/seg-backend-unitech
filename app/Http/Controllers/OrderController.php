@@ -470,6 +470,7 @@ class OrderController extends Controller
         }
     }
 
+
     public function getEmployeeOrders(Request $request)
     {
         $baseUrl = env('BASE_URL'); // Assuming this is your media URL for images
@@ -493,12 +494,23 @@ class OrderController extends Controller
                 'variant',
             ])->get();
 
+
+        $orders = $orders->map(function ($order) {
+            $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
+            unset($order->orderPoints); // remove original relation if needed
+            return $order;
+        });
+
+
+
         return response()->json([
             'status' => true,
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
     }
+
+
     public function getCompanyOrders(Request $request)
     {
         $baseUrl = env('BASE_URL'); // Assuming this is your media URL for images
@@ -517,11 +529,18 @@ class OrderController extends Controller
                 'scratch_coating:id,title',
                 'lens_tint:id,title',
                 'lens_protection:id,title',
+
                 'frame_size:frame_size_id,frame_size_name',
                 'product:product_id,product_name',
                 'variant',
             ])->get();
 
+
+        $orders = $orders->map(function ($order) {
+            $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
+            unset($order->orderPoints); // remove original relation if needed
+            return $order;
+        });
 
 
 
@@ -554,6 +573,12 @@ class OrderController extends Controller
             'variant'
         ])->get();
 
+
+        $orders = $orders->map(function ($order) {
+            $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
+            unset($order->orderPoints); // remove original relation if needed
+            return $order;
+        });
 
 
         return response()->json([
