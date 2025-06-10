@@ -70,6 +70,7 @@ class ProductController extends Controller
                 'product_status' => 'required|numeric',
                 'frame_sizes' => 'required|array', // array will come of this 
                 'frame_sizes.*' => 'numeric', // ensuring each frame size id in the array is numeric 
+                'featured_image' => 'required|image|max:2048', // Added validation for featured image
 
                 'variants' => 'required|array',
                 'variants.*.color_name' => 'required|string',
@@ -80,7 +81,6 @@ class ProductController extends Controller
                 'variants.*.photo_config_name' => 'nullable|string',
                 'variants.*.images' => 'nullable|array',
                 'variants.*.images.*' => 'nullable|image|max:2048',
-                'variants.*.primary_image_index' => 'required|integer|min:0',
 
             ]);
 
@@ -96,6 +96,9 @@ class ProductController extends Controller
             }
             if ($request->has('frame_features')) {
                 $input['frame_features'] = implode(',', $request->frame_features);
+            }
+            if ($request->hasFile('featured_image')) {
+                $input['featured_image'] = $this->uploadImages($request->file('featured_image'), 'products');
             }
 
             $product = Product::create($input);
@@ -115,15 +118,13 @@ class ProductController extends Controller
 
                 $productVariant = ProductVariants::create($variantData);
 
-                // Upload and save images
+
                 if (!empty($variant['images'])) {
-                    $primaryIndex = $variant['primary_image_index'] ?? 0;
-                    foreach ($variant['images'] as $index => $image) {
+                    foreach ($variant['images'] as $image) {
                         $imagePath = $this->uploadImages($image, 'products');
                         ProductImage::create([
                             'variant_id' => $productVariant->id,
                             'image_path' => $imagePath,
-                            'is_primary' => $index === $primaryIndex ? 1 : 0,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
@@ -195,6 +196,9 @@ class ProductController extends Controller
                 'product_status' => 'required|numeric',
                 'frame_sizes' => 'required|array',
                 'frame_sizes.*' => 'numeric',
+                'featured_image' => 'nullable|image|max:2048', // Added validation for featured image
+
+
                 'variants' => 'required|array',
                 'variants.*.id' => 'nullable|numeric',
                 'variants.*.color_name' => 'required|string',
@@ -207,20 +211,32 @@ class ProductController extends Controller
                 'variants.*.images.*' => 'nullable|image|max:2048',
                 'variants.*.deleted_images' => 'nullable|array',
                 'variants.*.deleted_images.*' => 'numeric',
-                'variants.*.primary_image_index' => 'nullable|integer|min:0',
             ]);
             DB::beginTransaction();
 
             $product = Product::findOrFail($id);
 
             // Update main product
-            $input = $request->except('variants', 'product_tags', 'frame_sizes', 'frame_features');
+            $input = $request->except('variants', 'product_tags', 'frame_sizes', 'frame_features', 'featured_image');
+
+
             if ($request->has('product_tags')) {
                 $input['product_tags'] = implode(',', $request->product_tags);
             }
 
             if ($request->has('frame_features')) {
                 $input['frame_features'] = implode(',', $request->frame_features);
+            }
+
+            if ($request->hasFile('featured_image')) {
+                // Delete old featured image if exists
+                if ($product->featured_image) {
+                    $fullPath = public_path('/projectimages/products/' . $product->featured_image);
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                    }
+                }
+                $input['featured_image'] = $this->uploadImages($request->file('featured_image'), 'products');
             }
 
 
@@ -280,19 +296,13 @@ class ProductController extends Controller
 
                     // Upload and save new images
                     if (isset($variant['images']) && is_array($variant['images'])) {
-                        $primaryIndex = $variant['primary_image_index'] ?? 0; // Default to 0 if not provided
-
-                        // Reset existing primary image to ensure only one is primary
-                        ProductImage::where('variant_id', $productVariant->id)->update(['is_primary' => 0]);
-
-                        foreach ($variant['images'] as $index => $image) {
+                        foreach ($variant['images'] as $image) {
                             if ($image instanceof \Illuminate\Http\UploadedFile && $image->isValid()) {
                                 $imagePath = $this->uploadImages($image, 'products');
                                 if ($imagePath) {
                                     ProductImage::create([
                                         'variant_id' => $productVariant->id,
                                         'image_path' => $imagePath,
-                                        'is_primary' => $index === $primaryIndex ? 1 : 0,
                                         'created_at' => now(),
                                         'updated_at' => now(),
                                     ]);
