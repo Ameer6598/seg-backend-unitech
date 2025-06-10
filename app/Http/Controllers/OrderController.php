@@ -71,7 +71,9 @@ class OrderController extends Controller
 
             'product_quantity' => 'required|integer|min:1',
             'net_total' => 'required|numeric|min:0',
-            'paid_ammount' => 'nullable|numeric|min:0',
+            'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
+            'paid_amount_via_card ' => 'nullable|numeric|min:0',
+
             // Prescription fields
             'frame_type' => 'required|string|max:255',
             'frame_prescription' => 'required|string|max:255',
@@ -149,7 +151,9 @@ class OrderController extends Controller
             'product_id',
             'product_quantity',
             'net_total',
-            'paid_ammount',
+            'paid_amount_via_card',
+            'paid_amount_via_benefit',
+        
             'frame_size',
             'variant_id'
         ]));
@@ -256,7 +260,10 @@ class OrderController extends Controller
 
             'product_quantity' => 'required|integer|min:1',
             'net_total' => 'required|numeric|min:0',
-            'paid_ammount' => 'nullable|numeric|min:0',
+            'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
+            'paid_amount_via_card ' => 'nullable|numeric|min:0',
+
+           
             // Billing details
             'billing_first_name' => 'required|string|max:255',
             'billing_last_name' => 'required|string|max:255',
@@ -325,7 +332,9 @@ class OrderController extends Controller
             'product_id',
             'product_quantity',
             'net_total',
-            'paid_ammount',
+            'paid_amount_via_card',
+            'paid_amount_via_benefit',
+          
             'frame_size',
             'variant_id'
         ]));
@@ -654,8 +663,10 @@ class OrderController extends Controller
             'color' => 'nullable|integer',
             'frame_size' => 'nullable',
             'product_quantity' => 'nullable|integer|min:1',
-            'net_total' => 'nullable|numeric|min:0',
-            'paid_ammount' => 'nullable|numeric|min:0',
+            'net_total' => 'required|numeric|min:0',
+            'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
+            'paid_amount_via_card ' => 'nullable|numeric|min:0',
+          
             // Prescription fields
             'frame_type' => 'nullable|string|max:255',
             'frame_prescription' => 'nullable|string|max:255',
@@ -739,7 +750,9 @@ class OrderController extends Controller
                 'product_id',
                 'product_quantity',
                 'net_total',
-                'paid_ammount',
+                'paid_amount_via_benefit',
+                'paid_amount_via_card',
+               
                 'frame_size',
                 'color',
                 'order_status',
