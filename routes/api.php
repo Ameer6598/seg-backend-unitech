@@ -56,7 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('all', [ProductController::class, 'getProductOrAll']);
             Route::get('{productId}', [ProductController::class, 'getProductOrAll']);
             Route::get('/details/{productId}', [ProductController::class, 'getFullProductDetail']);
-            Route::post('update', [ProductController::class, 'update']);
+            Route::post('update/{id}', [ProductController::class, 'update']);
             Route::delete('delete/{productId}', [ProductController::class, 'deleteProduct']);
             Route::post('/upload-products', [ProductController::class, 'upload'])->name('products.upload');
         });
