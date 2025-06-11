@@ -40,9 +40,8 @@ class ImportEmployees implements ToCollection, WithHeadingRow
                     'username' => 'required',
                     'email' => 'required|email|unique:users,email',
                     'phone' => 'required|unique:employees,phone',
-                    // 'password' => 'required',
                     'designation' => 'required',
-                    'benefit_amount' => ['nullable', 'numeric'],
+
                 ]);
 
                 if ($validator->fails()) {
@@ -50,7 +49,6 @@ class ImportEmployees implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Manual check for phone number in companies table
                 if (Company::where('phone', $row['phone'])->exists()) {
                     $this->errors[] = "Row " . ($index + 2) . ": The phone number is already in use by a company.";
                     continue;
@@ -77,12 +75,11 @@ class ImportEmployees implements ToCollection, WithHeadingRow
 
                 DB::beginTransaction();
 
-                // Create Employee
                 $employee = Employee::create([
                     'designation' => $row['designation'] ?? '',
-                    'status' => $row['status'] ?? '',
+                    'status' => 'Active',
                     'phone' => $row['phone'] ?? '',
-                    'benefit_amount' => $row['benefit_amount'] ?? 0,
+                    'benefit_amount' => 0,
                     'company_id' => auth('sanctum')->user()->company_id,
                 ]);
 
@@ -98,16 +95,16 @@ class ImportEmployees implements ToCollection, WithHeadingRow
                     'password' => Hash::make($randomPassword),
                 ]);
 
-                // Create Transaction if benefit_amount is provided
-                if (!empty($row['benefit_amount'])) {
-                    Transaction::create([
-                        'employee_id' => $employee->id,
-                        'transaction_type' => 'credit',
-                        'amount' => $row['benefit_amount'] ?? 0,
-                        'balance' => $row['benefit_amount'] ?? 0,
-                        'description' => $row['description'] ?? '',
-                    ]);
-                }
+                // // Create Transaction if benefit_amount is provided
+                // if (!empty($row['benefit_amount'])) {
+                //     Transaction::create([
+                //         'employee_id' => $employee->id,
+                //         'transaction_type' => 'credit',
+                //         'amount' => $row['benefit_amount'] ?? 0,
+                //         'balance' => $row['benefit_amount'] ?? 0,
+                //         'description' => $row['description'] ?? '',
+                //     ]);
+                // }
 
                 DB::commit();
             } catch (\Exception $e) {
