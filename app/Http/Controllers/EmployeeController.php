@@ -346,7 +346,7 @@ class EmployeeController extends Controller
                 'employeeids' => 'required|array',
                 'employeeids.*' => 'required|integer',
 
-                'productid' => 'required|array',
+                '`productid`' => 'required|array',
                 'productid.*' => 'required|integer',
 
             ]);

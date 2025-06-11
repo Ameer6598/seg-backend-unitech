@@ -138,16 +138,16 @@ class ProductController extends Controller
 
 
 
-            $companies = DB::table('companies')->select('id')->get();
-            $mappings = $companies->map(function ($company) use ($product) {
-                return [
-                    'product_id' => $product->product_id,
-                    'company_id' => $company->id,
-                    'created_at' => now(),
-                ];
-            })->toArray();
+            // $companies = DB::table('companies')->select('id')->get();
+            // $mappings = $companies->map(function ($company) use ($product) {
+            //     return [
+            //         'product_id' => $product->product_id,
+            //         'company_id' => $company->id,
+            //         'created_at' => now(),
+            //     ];
+            // })->toArray();
 
-            CompanyProduct::insert($mappings);
+            // CompanyProduct::insert($mappings);
 
             DB::commit();
             return $this->successResponse(['model' => 'products'], 'Product created successfully', [
@@ -380,6 +380,9 @@ class ProductController extends Controller
                 // Add base URL to image paths
                 $products->map(function ($product) use ($mediaURL) {
 
+
+                    $product->featured_image = $mediaURL . $product->featured_image;
+
                     unset($product->category);
                     unset($product->sub_category);
                     unset($product->rim_type);
@@ -405,6 +408,7 @@ class ProductController extends Controller
                     } else {
                         $product->frame_features = [];
                     }
+
 
 
 
@@ -480,6 +484,8 @@ class ProductController extends Controller
 
             // Process products and add base URL to image paths
             $products->map(function ($product) use ($mediaURL) {
+
+                $product->featured_image = $mediaURL . $product->featured_image;
                 // Remove unnecessary attributes
                 unset($product->category);
                 unset($product->sub_category);
@@ -585,6 +591,8 @@ class ProductController extends Controller
 
             $collection->transform(function ($product) use ($mediaURL) {
 
+
+                $product->featured_image = $mediaURL . $product->featured_image;
                 // Remove unnecessary attributes if present
                 unset($product->category);
                 unset($product->sub_category);

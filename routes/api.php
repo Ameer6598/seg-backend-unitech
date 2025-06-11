@@ -51,6 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{companyId}', [CompanyController::class, 'getCompany']);
         });
 
+        Route::post('assign-product-to-company', [CompanyController::class, 'assignProductToCompany']);
+
         Route::prefix('product')->group(function () {
             Route::post('create', [ProductController::class, 'create']);
             Route::get('all', [ProductController::class, 'getProductOrAll']);
@@ -60,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('delete/{productId}', [ProductController::class, 'deleteProduct']);
             Route::post('/upload-products', [ProductController::class, 'upload'])->name('products.upload');
         });
+
 
         Route::get('get-all-orders', [OrderController::class, 'getAllOrders']);
         Route::post('update-order/{id}', [OrderController::class, 'updateOrder']);
@@ -100,12 +103,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
         Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
         Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
-        Route::post('update-employee', [EmployeeController::class, 'updatedetails']);   
+        Route::post('update-employee', [EmployeeController::class, 'updatedetails']);
         //route for tem order
         Route::post('orders/temp-store', [TempOrderController::class, 'saveOrderDetails']);
         Route::get('employee/temp/order-details', [TempOrderController::class, 'getEmployeeOrderDetails']);
-
-
     });
     Route::post('/logout', [AuthController::class, 'logout']);
 
