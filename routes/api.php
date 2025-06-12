@@ -28,6 +28,8 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::post('set/newpassword', [AuthController::class, 'set']);
 
+Route::post('forget/pssword', [AuthController::class, 'forgetpassword']);
+
 Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
 Route::post('/check-payment-status', [StripeController::class, 'checkPaymentStatus']);
 

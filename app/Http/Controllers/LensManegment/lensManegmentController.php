@@ -50,8 +50,6 @@ class lensManegmentController extends Controller
             'data' => $materials,
         ]);
     }
-
-
     public function create(Request $request)
     {
 

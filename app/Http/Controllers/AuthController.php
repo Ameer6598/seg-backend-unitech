@@ -7,10 +7,13 @@ use App\Models\Order;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Traits\ApiResponse;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
+use App\Mail\ForgotPasswordMail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -111,19 +114,26 @@ class AuthController extends Controller
                 return $this->errorResponse(['model' => 'user'], 'User not found', [], 404);
             }
 
-            $createdAt = $user->created_at;
-            if ($createdAt && now()->diffInHours($createdAt) > 12) {
+            // Check if verification number matches
+            if ($user->verification_number !== $request->verification_number) {
+                return $this->errorResponse(['model' => 'user'], 'Verification number is Invalid.', [], 422);
+            }
+
+            // Optional: Check if time limit exceeded (within 12 hours)
+            if ($user->created_at && now()->diffInHours($user->created_at) > 12) {
                 return $this->errorResponse(['model' => 'user'], 'Time limit to reset password has expired.', [], 403);
             }
 
-            if ($user->verification_number !== $request->verification_number) {
-                return $this->errorResponse(['model' => 'user'], 'Verification number does not match', [], 422);
-            }
-
+            // Update password
             $user->password = Hash::make($request->password);
+
+            // Optional: clear verification number so link becomes useless after use
+            $user->verification_number = '';
+
             $user->save();
 
             DB::commit();
+
             return $this->successResponse(['model' => 'user'], 'Password updated successfully.', [], 200);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -131,6 +141,42 @@ class AuthController extends Controller
         }
     }
 
+
+
+    public function forgetpassword(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            $request->validate([
+                'email' => 'required|email',
+            ]);
+
+            // Fix typo: $request->Emai -> $request->email
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return $this->errorResponse(['model' => 'user'], 'User not found', [], 404);
+            }
+
+            // Generate new verification number
+            $user->verification_number = Str::uuid();
+            $user->save();
+
+            DB::commit();
+
+            // Generate password reset link
+            $resetLink = "https://app.safetyeyeguard.com/new-password/{$user->id}/{$user->verification_number}";
+
+            // Send mail
+            Mail::to($user->email)->send(new ForgotPasswordMail($user->name, $resetLink));
+
+            return $this->successResponse(['model' => 'user'], 'Reset link sent successfully.', [], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'user'], $e->getMessage(), [], 422);
+        }
+    }
 
     public function logout(Request $request)
     {
