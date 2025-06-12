@@ -81,7 +81,7 @@ class CompanyController extends Controller
                 'address' => $request->address ?? '',
                 'phone' => $request->phone ?? '',
                 'company_logo' => $logoPath,
-                'company_Information'=>$request->company_Information,
+                'company_Information' => $request->company_Information,
             ]);
 
             $user = User::create([
@@ -119,7 +119,7 @@ class CompanyController extends Controller
                 'company_id' => 'required',
                 'status' => 'required|in:0,1', // Correct syntax for in rule
                 'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-
+                'company_Information' => 'nullable|string',
 
             ]);
             DB::beginTransaction();
@@ -156,6 +156,7 @@ class CompanyController extends Controller
                 'address' => $request->address ?? $company->address,
                 'phone' => $request->phone ?? $company->phone,
                 'company_logo' => $logoPath,
+                'company_Information' => $request->company_Information,
             ]);
 
             $user->update([

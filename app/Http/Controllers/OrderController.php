@@ -93,6 +93,17 @@ class OrderController extends Controller
             'pupil_distance_online' => 'nullable|string',
             'od_left_2_pds_online' => 'nullable|string|max:10',
             'od_right_2_pds_online' => 'nullable|string|max:10',
+            'vertical_right' => 'required|string',
+            'vertical_left' => 'required|string',
+            'vertical_base_direction_right' => 'required|string',
+            'vertical_base_direction_left' => 'required|string',
+            'horizontal_rigth' => 'required|string',
+            'horizontal_left' => 'required|string',
+            'horizontal_base_direction_right' => 'required|string',
+            'horizontal_base_direction_left' => 'required|string',
+            'special_notes' => 'required|string',
+
+
         ]);
 
         if ($validator->fails()) {
@@ -124,6 +135,16 @@ class OrderController extends Controller
             'pupil_distance_online',
             'od_left_2_pds_online',
             'od_right_2_pds_online',
+            'vertical_right',
+            'vertical_left',
+            'vertical_base_direction_right',
+            'vertical_base_direction_left',
+            'horizontal_rigth',
+            'horizontal_left',
+            'horizontal_base_direction_right',
+            'horizontal_base_direction_left',
+            'special_notes',
+
 
         ]));
         if ($request->hasFile('prescription_image')) {
@@ -153,7 +174,7 @@ class OrderController extends Controller
             'net_total',
             'paid_amount_via_card',
             'paid_amount_via_benefit',
-        
+
             'frame_size',
             'variant_id'
         ]));
@@ -263,7 +284,7 @@ class OrderController extends Controller
             'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
             'paid_amount_via_card ' => 'nullable|numeric|min:0',
 
-           
+
             // Billing details
             'billing_first_name' => 'required|string|max:255',
             'billing_last_name' => 'required|string|max:255',
@@ -334,7 +355,7 @@ class OrderController extends Controller
             'net_total',
             'paid_amount_via_card',
             'paid_amount_via_benefit',
-          
+
             'frame_size',
             'variant_id'
         ]));
@@ -666,7 +687,7 @@ class OrderController extends Controller
             'net_total' => 'required|numeric|min:0',
             'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
             'paid_amount_via_card ' => 'nullable|numeric|min:0',
-          
+
             // Prescription fields
             'frame_type' => 'nullable|string|max:255',
             'frame_prescription' => 'nullable|string|max:255',
@@ -752,7 +773,7 @@ class OrderController extends Controller
                 'net_total',
                 'paid_amount_via_benefit',
                 'paid_amount_via_card',
-               
+
                 'frame_size',
                 'color',
                 'order_status',

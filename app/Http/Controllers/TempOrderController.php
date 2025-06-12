@@ -20,6 +20,7 @@ class TempOrderController extends Controller
             $step = $request->input('step');
 
             if ($step == 1) {
+
                 $request->validate([
                     'frame_type' => 'required|string|max:255',
                     'frame_prescription' => 'required|string|max:255',
@@ -35,6 +36,17 @@ class TempOrderController extends Controller
                     'od_right_nv_add' => 'required|string|max:10',
                     'od_right_2_pds' => 'required|string|max:10',
                     'pupil_distance' => 'required|string',
+
+                    'vertical_right' => 'nullable|string',
+                    'vertical_left' => 'nullable|string',
+                    'vertical_base_direction_right' => 'nullable|string',
+                    'vertical_base_direction_left' => 'nullable|string',
+                    'horizontal_rigth' => 'nullable|string',
+                    'horizontal_left' => 'nullable|string',
+                    'horizontal_base_direction_right' => 'nullable|string',
+                    'horizontal_base_direction_left' => 'nullable|string',
+                    'special_notes' => 'nullable|string',
+
 
                 ]);
 
@@ -56,6 +68,19 @@ class TempOrderController extends Controller
                     'od_right_nv_add',
                     'od_right_2_pds',
                     'pupil_distance',
+
+                    'vertical_right',
+                    'vertical_left',
+                    'vertical_base_direction_right',
+                    'vertical_base_direction_left',
+                    'horizontal_rigth',
+                    'horizontal_left',
+                    'horizontal_base_direction_right',
+                    'horizontal_base_direction_left',
+                    'special_notes',
+
+
+
                 ]));
 
                 if ($request->hasFile('prescription_image')) {
@@ -109,8 +134,13 @@ class TempOrderController extends Controller
             }
 
             DB::commit();
+            DB::commit();
 
-            return $this->successResponse(null, 'Order details saved successfully', $temorderdetails);
+            if (isset($temorderdetails)) {
+                return $this->successResponse(null, 'Order details saved successfully', $temorderdetails);
+            }
+
+            return $this->errorResponse(null, 'Order details not processed', [], 400);
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(null, 'Something went wrong', ['error' => $e->getMessage()], 500);
