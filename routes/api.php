@@ -35,11 +35,17 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
 
+
+
+    Route::middleware('role:owner,company')->group(function () {
+        Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
+    });
+
+
     Route::middleware('role:owner')->group(function () {
 
 
         Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
-        Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
 
 
         Route::post('update-owner-details', [AdminController::class, 'updateOwnerDetails']);

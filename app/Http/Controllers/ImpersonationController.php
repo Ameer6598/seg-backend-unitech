@@ -71,7 +71,7 @@ class ImpersonationController extends Controller
 
     public function impersonateemployee(Request $request, $id)
     {
-        if ($request->user()->role !== 'owner') {
+        if (!in_array($request->user()->role, ['owner', 'company'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -89,7 +89,7 @@ class ImpersonationController extends Controller
                 'email' => ['This account is currently inactive.'],
             ]);
         }
-        
+
 
         $token = $user->createToken('impersonation_token', [
             'is_impersonation' => true,
@@ -112,7 +112,7 @@ class ImpersonationController extends Controller
             'address' => optional($user->Companydata)->address,
         ];
 
-        return $this->successResponse(array('model' => 'users'), 'Impersonated as Company successfully', [
+        return $this->successResponse(array('model' => 'users'), 'Impersonated as Employe successfully', [
             'access_token' => $token,
             'token_type' => 'Bearer',
             'role' => $user->role,
