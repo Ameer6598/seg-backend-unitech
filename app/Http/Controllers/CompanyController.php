@@ -34,6 +34,7 @@ class CompanyController extends Controller
                 'phone' => 'required|unique:companies,phone', // Checks uniqueness in companies table
                 'password' => 'required|string|min:6',
                 'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
+                'company_Information' => 'nullable|string',
             ]);
 
             // Manual check for phone number in employees table
@@ -80,6 +81,7 @@ class CompanyController extends Controller
                 'address' => $request->address ?? '',
                 'phone' => $request->phone ?? '',
                 'company_logo' => $logoPath,
+                'company_Information'=>$request->company_Information,
             ]);
 
             $user = User::create([
