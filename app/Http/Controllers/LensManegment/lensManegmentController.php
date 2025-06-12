@@ -867,42 +867,103 @@ class lensManegmentController extends Controller
     }
 
 
+    // public function getall()
+    // {
+
+    //     $CompanyId = auth('sanctum')->user()->company_id;
+    //     $baseUrl = env('LOGO_URL');
+
+    //     $materials = LensMaterial::all()->map(function ($item) use ($baseUrl) {
+    //         $item->image_url = $baseUrl . $item->image_url;
+    //         return $item;
+    //     });
+
+    //     $coatings = ScracthCoating::all()->map(function ($item) use ($baseUrl) {
+    //         $item->image_url = $baseUrl . $item->image_url;
+    //         return $item;
+    //     });
+
+    //     $tints = LensTint::all()->map(function ($item) use ($baseUrl) {
+    //         $item->image_url = $baseUrl . $item->image_url;
+    //         return $item;
+    //     });
+
+    //     $lensProtections = LensProtection::all()->map(function ($item) use ($baseUrl) {
+    //         $item->image_url = $baseUrl . $item->image_url;
+    //         return $item;
+    //     });
+
+    //     $blueLightProtections = BlueLightProtection::all()->map(function ($item) use ($baseUrl) {
+    //         $item->image_url = $baseUrl . $item->image_url;
+    //         return $item;
+    //     });
 
 
+
+
+    //     return response()->json([
+    //         'materials' => $materials,
+    //         'coatings' => $coatings,
+    //         'tints' => $tints,
+    //         'lens_protections' => $lensProtections,
+    //         'blue_light_protections' => $blueLightProtections,
+    //     ]);
+    // }
 
     public function getall()
     {
-
-
+        $CompanyId = auth('sanctum')->user()->company_id;
         $baseUrl = env('LOGO_URL');
 
-        $materials = LensMaterial::all()->map(function ($item) use ($baseUrl) {
+        // Only get materials assigned to this company
+        $materials = LensMaterial::whereIn('id', function ($query) use ($CompanyId) {
+            $query->select('lens_material_id')
+                ->from('company_lens_material_mapper')
+                ->where('company_id', $CompanyId);
+        })->get()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
 
-        $coatings = ScracthCoating::all()->map(function ($item) use ($baseUrl) {
+        // Only get scratch coatings assigned to this company
+        $coatings = ScracthCoating::whereIn('id', function ($query) use ($CompanyId) {
+            $query->select('scratch_coating_id')
+                ->from('company_scratch_coating_mapper')
+                ->where('company_id', $CompanyId);
+        })->get()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
 
-        $tints = LensTint::all()->map(function ($item) use ($baseUrl) {
+        // Only get tints assigned to this company
+        $tints = LensTint::whereIn('id', function ($query) use ($CompanyId) {
+            $query->select('lens_tint_id')
+                ->from('company_lens_tint_mapper')
+                ->where('company_id', $CompanyId);
+        })->get()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
 
-        $lensProtections = LensProtection::all()->map(function ($item) use ($baseUrl) {
+        // Only get lens protections assigned to this company
+        $lensProtections = LensProtection::whereIn('id', function ($query) use ($CompanyId) {
+            $query->select('lens_protection_id')
+                ->from('company_lens_protection_mapper')
+                ->where('company_id', $CompanyId);
+        })->get()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
 
-        $blueLightProtections = BlueLightProtection::all()->map(function ($item) use ($baseUrl) {
+        // Only get blue light protections assigned to this company
+        $blueLightProtections = BlueLightProtection::whereIn('id', function ($query) use ($CompanyId) {
+            $query->select('blue_light_protection_id')
+                ->from('company_blue_light_protection_mapper')
+                ->where('company_id', $CompanyId);
+        })->get()->map(function ($item) use ($baseUrl) {
             $item->image_url = $baseUrl . $item->image_url;
             return $item;
         });
-
-
-
 
         return response()->json([
             'materials' => $materials,

@@ -10,9 +10,14 @@ use App\Http\Controllers\StripeController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\ImpersonationController;
-use App\Http\Controllers\LensManegment\lensManegmentController;
 use App\Http\Controllers\TempOrderController;
+use App\Http\Controllers\ImpersonationController;
+use App\Http\Controllers\LensManegment\AssignLenstint;
+use App\Http\Controllers\LensManegment\AssignLensMaterial;
+use App\Http\Controllers\LensManegment\AssignLensProtection;
+use App\Http\Controllers\LensManegment\AssignScratchCoating;
+use App\Http\Controllers\LensManegment\lensManegmentController;
+use App\Http\Controllers\LensManegment\AssignBlueLightProtection;
 
 Route::get('/users', function () {
     return 'API User route done' . Hash::make('admin');
@@ -35,8 +40,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
 
-
-
     Route::middleware('role:owner,company')->group(function () {
         Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
     });
@@ -57,7 +60,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{companyId}', [CompanyController::class, 'getCompany']);
         });
 
+        //assign to companies
         Route::post('assign-product-to-company', [CompanyController::class, 'assignProductToCompany']);
+        Route::post('assign-lens_material_to_company',[AssignLensMaterial::class,'AssignLensMaterialToCompany']);
+        Route::post('assign-scratch_coating-to-company', [AssignScratchCoating::class, 'assignScratchCoatingToCompany']);
+        Route::post('assign-lens_tint-to-company', [AssignLenstint::class, 'assignLensTintToCompany']);
+        Route::post('assign-lens_protection-to-company', [AssignLensProtection::class, 'assignLensProtectionToCompany']);
+        Route::post('assign-blue_light_protection-to-company', [AssignBlueLightProtection::class, 'assignBlueLightProtectionToCompany']);
+
+
+
+
+
 
         Route::prefix('product')->group(function () {
             Route::post('create', [ProductController::class, 'create']);
