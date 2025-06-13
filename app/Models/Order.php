@@ -76,7 +76,7 @@ class Order extends Model
     }
 
     public function product(){
-        return $this->hasOne(Product::class,'product_id','product_id');  
+        return $this->hasOne(Product::class,'product_id','product_id')->with('manufacturer');  
 
     }
      public function variant()

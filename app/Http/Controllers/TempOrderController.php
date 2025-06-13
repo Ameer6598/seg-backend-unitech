@@ -22,6 +22,7 @@ class TempOrderController extends Controller
             if ($step == 1) {
 
                 $request->validate([
+                    'order_type' => 'required|string|max:255',
                     'frame_type' => 'required|string|max:255',
                     'frame_prescription' => 'required|string|max:255',
                     'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -55,6 +56,7 @@ class TempOrderController extends Controller
                 ]);
 
                 $temorderdetails->fill($request->only([
+                    'order_type',
                     'frame_type',
                     'frame_prescription',
                     'od_left_sphere',

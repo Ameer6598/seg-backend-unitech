@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use Stripe\Stripe;
+use Stripe\Invoice;
 use App\Models\User;
+use Stripe\Customer;
 use App\Models\Order;
 use App\Traits\Common;
+use Stripe\InvoiceItem;
 use App\Models\Employee;
 use App\Models\Transaction;
 use App\Traits\ApiResponse;
@@ -22,6 +26,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Models\EmployeTempOrderdetail;
 use Illuminate\Support\Facades\Validator;
 
+
 class OrderController extends Controller
 {
     //
@@ -29,13 +34,246 @@ class OrderController extends Controller
     use Common;
 
 
+    // public function newPresOrder(Request $request)
+    // {
+
+    //     $validator = Validator::make($request->all(), [
+    //         'blue_light_protection' => 'required|string',
+    //         'order_type' => 'required|string|max:255',
+
+    //         'lense_material' => 'required|string|max:255',
+    //         'scratch_coating' => 'required',
+    //         'lens_tint' => 'required|string|max:255',
+    //         'lens_protection' => 'required|string|max:255',
+    //         // Billing details
+    //         'billing_first_name' => 'required|string|max:255',
+    //         'billing_last_name' => 'required|string|max:255',
+    //         'billing_email' => 'required|email|max:255',
+    //         'billing_country' => 'required|string|max:255',
+    //         'billing_city' => 'required|string|max:255',
+    //         'billing_state' => 'required|string|max:255',
+    //         'billing_address' => 'required|string|max:1000',
+    //         'billing_second_address' => 'nullable|string|max:1000',
+    //         'billing_zip_postal_code' => 'required|string|max:20',
+    //         'billing_phone_number' => 'required|string|max:20',
+    //         // Shipping details
+    //         'shipping_first_name' => 'required|string|max:255',
+    //         'shipping_last_name' => 'required|string|max:255',
+    //         'shipping_email' => 'required|email|max:255',
+    //         'shipping_country' => 'required|string|max:255',
+    //         'shipping_city' => 'required|string|max:255',
+    //         'shipping_state' => 'required|string|max:255',
+    //         'shipping_address' => 'required|string|max:1000',
+    //         'shipping_second_address' => 'nullable|string|max:1000',
+    //         'shipping_zip_postal_code' => 'required|string|max:20',
+    //         'shipping_phone_number' => 'required|string|max:20',
+    //         'shipping_additional_information' => 'nullable|string|max:255',
+    //         'payment_method' => 'required|string|max:100',
+    //         'product_id' => 'required|integer',
+
+    //         'variant_id' => 'required|integer ',
+    //         'frame_size' => 'required',
+
+    //         'product_quantity' => 'required|integer|min:1',
+    //         'net_total' => 'required|numeric|min:0',
+    //         'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
+    //         'paid_amount_via_card ' => 'nullable|numeric|min:0',
+
+    //         // Prescription fields
+    //         'frame_type' => 'required|string|max:255',
+    //         'frame_prescription' => 'required|string|max:255',
+    //         'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    //         'od_left_sphere' => 'required|string|max:10',
+    //         'od_left_cylinders' => 'required|string|max:10',
+    //         'od_left_axis' => 'required|string|max:10',
+    //         'od_left_nv_add' => 'required|string|max:10',
+    //         'od_left_2_pds' => 'required|string|max:10',
+    //         'od_right_sphere' => 'required|string|max:10',
+    //         'od_right_cylinders' => 'required|string|max:10',
+    //         'od_right_axis' => 'required|string|max:10',
+    //         'od_right_nv_add' => 'required|string|max:10',
+    //         'od_right_2_pds' => 'required|string|max:10',
+    //         'pupil_distance' => 'required|string',
+    //         'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    //         'pupil_distance_online' => 'nullable|string',
+    //         'od_left_2_pds_online' => 'nullable|string|max:10',
+    //         'od_right_2_pds_online' => 'nullable|string|max:10',
+    //         'vertical_right' => 'required|string',
+    //         'vertical_left' => 'required|string',
+    //         'vertical_base_direction_right' => 'required|string',
+    //         'vertical_base_direction_left' => 'required|string',
+    //         'horizontal_rigth' => 'required|string',
+    //         'horizontal_left' => 'required|string',
+    //         'horizontal_base_direction_right' => 'required|string',
+    //         'horizontal_base_direction_left' => 'required|string',
+    //         'special_notes' => 'required|string',
+
+
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'errors' => $validator->errors()
+    //         ], 422);
+    //     }
+    //     $employeeId = auth('sanctum')->user()->employee_id;
+    //     $companyId = auth('sanctum')->user()->company_id;
+
+    //     $pres = new PrecriptionDetails();
+    //     $pres->employee_id = $employeeId;
+
+    //     $pres->fill($request->only([
+    //         'frame_type',
+    //         'frame_prescription',
+    //         'od_left_sphere',
+    //         'od_left_cylinders',
+    //         'od_left_axis',
+    //         'od_left_nv_add',
+    //         'od_left_2_pds',
+    //         'od_right_sphere',
+    //         'od_right_cylinders',
+    //         'od_right_axis',
+    //         'od_right_nv_add',
+    //         'od_right_2_pds',
+    //         'pupil_distance',
+    //         'pupil_distance_online',
+    //         'od_left_2_pds_online',
+    //         'od_right_2_pds_online',
+    //         'vertical_right',
+    //         'vertical_left',
+    //         'vertical_base_direction_right',
+    //         'vertical_base_direction_left',
+    //         'horizontal_rigth',
+    //         'horizontal_left',
+    //         'horizontal_base_direction_right',
+    //         'horizontal_base_direction_left',
+    //         'special_notes',
+
+
+    //     ]));
+    //     if ($request->hasFile('prescription_image')) {
+    //         $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
+    //     }
+    //     if ($request->hasFile('frame_picture')) {
+    //         $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
+    //     }
+
+
+
+    //     $pres->save();
+    //     $order = new Order();
+    //     $order->employee_id = $employeeId;
+    //     $order->company_id = $companyId;
+    //     $order->fill($request->only([
+    //         'blue_light_protection',
+    //         'order_type',
+
+    //         'lense_material',
+    //         'scratch_coating',
+    //         'lens_tint',
+    //         'lens_protection',
+    //         'payment_method',
+    //         'product_id',
+    //         'product_quantity',
+    //         'net_total',
+    //         'paid_amount_via_card',
+    //         'paid_amount_via_benefit',
+
+    //         'frame_size',
+    //         'variant_id'
+    //     ]));
+    //     $order->order_status = 'pending'; // default status
+    //     $order->order_confirmation_number = strtoupper(uniqid('CONF'));
+    //     $order->prescription_id  = $pres->id;
+    //     $order->save();
+
+
+    //     $shipping = new ShippingAddress();
+    //     $shipping->fill([
+    //         'first_name' => $request->input('shipping_first_name'),
+    //         'last_name' => $request->input('shipping_last_name'),
+    //         'email' => $request->input('shipping_email'),
+    //         'country' => $request->input('shipping_country'),
+    //         'state' => $request->input('shipping_state'),
+    //         'city' => $request->input('shipping_city'),
+    //         'address' => $request->input('shipping_address'),
+    //         'second_address' => $request->input('shipping_second_address'),
+    //         'zip_postal_code' => $request->input('shipping_zip_postal_code'),
+    //         'phone_number' => $request->input('shipping_phone_number'),
+    //         'additional_information' => $request->input('shipping_additional_information'),
+    //     ]);
+
+    //     $shipping->order_id = $order->id;
+    //     $shipping->save();
+
+
+    //     // Save Billing Address
+    //     $billing = new BillingAddress();
+    //     $billing->fill([
+    //         'first_name' => $request->input('billing_first_name'),
+    //         'last_name' => $request->input('billing_last_name'),
+    //         'email' => $request->input('billing_email'),
+    //         'country' => $request->input('billing_country'),
+    //         'state' => $request->input('billing_state'),
+    //         'city' => $request->input('billing_city'),
+    //         'address' => $request->input('billing_address'),
+    //         'second_address' => $request->input('billing_second_address'),
+    //         'zip_postal_code' => $request->input('billing_zip_postal_code'),
+    //         'phone_number' => $request->input('billing_phone_number'),
+    //     ]);
+
+    //     $billing->order_id = $order->id;
+    //     $billing->save();
+
+
+
+    //     // Employee benefit deduction
+    //     $employee = Employee::findOrFail($employeeId);
+    //     $deductionAmount = $request->net_total;
+
+    //     if ($employee->benefit_amount < $deductionAmount) {
+    //         $deductionAmount = $employee->benefit_amount;
+    //     }
+    //     $employee->benefit_amount -= $deductionAmount;
+    //     $employee->save();
+    //     $this->deleteEmployeeOrderDetails($employeeId);
+
+
+    //     Transaction::create([
+    //         'employee_id' => $employeeId,
+    //         'transaction_type' => 'debit',
+    //         'amount' => $request->net_total ?? '',
+    //         'balance' => $employee->benefit_amount ?? '',
+    //         'description' => 'order',
+    //     ]);
+
+    //     $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+
+
+
+    //     $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
+    //     $confirmation_num = $order->order_confirmation_number;
+
+
+
+    //     Mail::to($email)->send(new OrderConfirmationMail($order));
+
+
+    //     return response()->json([
+    //         'status' => true,
+    //         'message' => 'Order and prescription details saved successfully.',
+    //         'order_confire' => $order->order_confirmation_number,
+    //         'order_id' => $order->id,
+    //         'prescription_id' => $pres->id,
+    //     ]);
+    // }
+
     public function newPresOrder(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'required|string',
             'order_type' => 'required|string|max:255',
-
             'lense_material' => 'required|string|max:255',
             'scratch_coating' => 'required',
             'lens_tint' => 'required|string|max:255',
@@ -65,15 +303,12 @@ class OrderController extends Controller
             'shipping_additional_information' => 'nullable|string|max:255',
             'payment_method' => 'required|string|max:100',
             'product_id' => 'required|integer',
-
-            'variant_id' => 'required|integer ',
+            'variant_id' => 'required|integer',
             'frame_size' => 'required',
-
             'product_quantity' => 'required|integer|min:1',
             'net_total' => 'required|numeric|min:0',
-            'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
-            'paid_amount_via_card ' => 'nullable|numeric|min:0',
-
+            'paid_amount_via_benefit' => 'nullable|numeric|min:0',
+            'paid_amount_via_card' => 'nullable|numeric|min:0',
             // Prescription fields
             'frame_type' => 'required|string|max:255',
             'frame_prescription' => 'required|string|max:255',
@@ -101,9 +336,7 @@ class OrderController extends Controller
             'horizontal_left' => 'required|string',
             'horizontal_base_direction_right' => 'required|string',
             'horizontal_base_direction_left' => 'required|string',
-            'special_notes' => 'required|string',
-
-
+            'special_notes' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -112,6 +345,7 @@ class OrderController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
+
         $employeeId = auth('sanctum')->user()->employee_id;
         $companyId = auth('sanctum')->user()->company_id;
 
@@ -144,9 +378,8 @@ class OrderController extends Controller
             'horizontal_base_direction_right',
             'horizontal_base_direction_left',
             'special_notes',
-
-
         ]));
+
         if ($request->hasFile('prescription_image')) {
             $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
         }
@@ -154,16 +387,14 @@ class OrderController extends Controller
             $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
         }
 
-
-
         $pres->save();
+
         $order = new Order();
         $order->employee_id = $employeeId;
         $order->company_id = $companyId;
         $order->fill($request->only([
             'blue_light_protection',
             'order_type',
-
             'lense_material',
             'scratch_coating',
             'lens_tint',
@@ -174,15 +405,15 @@ class OrderController extends Controller
             'net_total',
             'paid_amount_via_card',
             'paid_amount_via_benefit',
-
             'frame_size',
             'variant_id'
         ]));
-        $order->order_status = 'pending'; // default status
-        $order->order_confirmation_number = strtoupper(uniqid('CONF'));
-        $order->prescription_id  = $pres->id;
-        $order->save();
 
+        // Set order status based on payment method
+        $order->order_status = $request->payment_method === 'pay_later' ? 'pending_payment' : 'pending';
+        $order->order_confirmation_number = strtoupper(uniqid('CONF'));
+        $order->prescription_id = $pres->id;
+        $order->save();
 
         $shipping = new ShippingAddress();
         $shipping->fill([
@@ -202,8 +433,6 @@ class OrderController extends Controller
         $shipping->order_id = $order->id;
         $shipping->save();
 
-
-        // Save Billing Address
         $billing = new BillingAddress();
         $billing->fill([
             'first_name' => $request->input('billing_first_name'),
@@ -220,40 +449,78 @@ class OrderController extends Controller
 
         $billing->order_id = $order->id;
         $billing->save();
+        if ($request->payment_method === 'pay_later') {
+            try {
+                Stripe::setApiKey(config('services.stripe.secret'));
 
+                $remainingAmount = $request->net_total;
 
+                if ($remainingAmount <= 0) {
+                    throw new \Exception("Invoice amount must be greater than $0.00");
+                }
 
-        // Employee benefit deduction
-        $employee = Employee::findOrFail($employeeId);
-        $deductionAmount = $request->net_total;
+                // Step 1: Create Stripe Customer
+                $customer = Customer::create([
+                    'email' => $request->billing_email,
+                    'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
+                ]);
 
-        if ($employee->benefit_amount < $deductionAmount) {
-            $deductionAmount = $employee->benefit_amount;
+                // Step 2: Create Invoice with Payment Link
+                $invoice = \Stripe\Invoice::create([
+                    'customer' => $customer->id,
+                    'collection_method' => 'send_invoice',
+                    'days_until_due' => 30,
+                    'auto_advance' => true, // Automatically finalize this invoice
+                    'description' => 'Order #' . $request->order_id,
+                ]);
+
+                // Add invoice items
+                \Stripe\InvoiceItem::create([
+                    'customer' => $customer->id,
+                    'amount' => $remainingAmount * 100, // Amount in cents
+                    'currency' => 'usd',
+                    'description' => 'Order Payment',
+                    'invoice' => $invoice->id,
+                ]);
+
+                // Finalize and send the invoice
+                $finalizedInvoice = \Stripe\Invoice::retrieve($invoice->id);
+                $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
+                $sentInvoice = $finalizedInvoice->sendInvoice();
+
+                $order->stripe_invoice_id = $sentInvoice->id;
+                $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
+                $order->save();
+
+            } catch (\Exception $e) {
+                Log::error('Stripe Invoice Error: ' . $e->getMessage());
+                return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
+            }
+        } else {
+            // Employee benefit deduction for non-pay_later methods
+            $employee = Employee::findOrFail($employeeId);
+            $deductionAmount = $request->net_total;
+
+            if ($employee->benefit_amount < $deductionAmount) {
+                $deductionAmount = $employee->benefit_amount;
+            }
+            $employee->benefit_amount -= $deductionAmount;
+            $employee->save();
+            $this->deleteEmployeeOrderDetails($employeeId);
+
+            Transaction::create([
+                'employee_id' => $employeeId,
+                'transaction_type' => 'debit',
+                'amount' => $request->net_total ?? '',
+                'balance' => $employee->benefit_amount ?? '',
+                'description' => 'order',
+            ]);
         }
-        $employee->benefit_amount -= $deductionAmount;
-        $employee->save();
-        $this->deleteEmployeeOrderDetails($employeeId);
-
-
-        Transaction::create([
-            'employee_id' => $employeeId,
-            'transaction_type' => 'debit',
-            'amount' => $request->net_total ?? '',
-            'balance' => $employee->benefit_amount ?? '',
-            'description' => 'order',
-        ]);
 
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
-
-
-
-        $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
-        $confirmation_num = $order->order_confirmation_number;
-
-
+        $email = $user->email;
 
         Mail::to($email)->send(new OrderConfirmationMail($order));
-
 
         return response()->json([
             'status' => true,
@@ -263,6 +530,259 @@ class OrderController extends Controller
             'prescription_id' => $pres->id,
         ]);
     }
+
+// public function newPresOrder(Request $request)
+//     {
+//         $validator = Validator::make($request->all(), [
+//             'blue_light_protection' => 'required|string',
+//             'order_type' => 'required|string|max:255',
+//             'lense_material' => 'required|string|max:255',
+//             'scratch_coating' => 'required',
+//             'lens_tint' => 'required|string|max:255',
+//             'lens_protection' => 'required|string|max:255',
+//             // Billing details
+//             'billing_first_name' => 'required|string|max:255',
+//             'billing_last_name' => 'required|string|max:255',
+//             'billing_email' => 'required|email|max:255',
+//             'billing_country' => 'required|string|max:255',
+//             'billing_city' => 'required|string|max:255',
+//             'billing_state' => 'required|string|max:255',
+//             'billing_address' => 'required|string|max:1000',
+//             'billing_second_address' => 'nullable|string|max:1000',
+//             'billing_zip_postal_code' => 'required|string|max:20',
+//             'billing_phone_number' => 'required|string|max:20',
+//             // Shipping details
+//             'shipping_first_name' => 'required|string|max:255',
+//             'shipping_last_name' => 'required|string|max:255',
+//             'shipping_email' => 'required|email|max:255',
+//             'shipping_country' => 'required|string|max:255',
+//             'shipping_city' => 'required|string|max:255',
+//             'shipping_state' => 'required|string|max:255',
+//             'shipping_address' => 'required|string|max:1000',
+//             'shipping_second_address' => 'nullable|string|max:1000',
+//             'shipping_zip_postal_code' => 'required|string|max:20',
+//             'shipping_phone_number' => 'required|string|max:20',
+//             'shipping_additional_information' => 'nullable|string|max:255',
+//             'payment_method' => 'required|string|max:100',
+//             'product_id' => 'required|integer',
+//             'variant_id' => 'required|integer',
+//             'frame_size' => 'required',
+//             'product_quantity' => 'required|integer|min:1',
+//             'net_total' => 'required|numeric|min:0',
+//             'paid_amount_via_benefit' => 'nullable|numeric|min:0',
+//             'paid_amount_via_card' => 'nullable|numeric|min:0',
+//             // Prescription fields
+//             'frame_type' => 'required|string|max:255',
+//             'frame_prescription' => 'required|string|max:255',
+//             'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+//             'od_left_sphere' => 'required|string|max:10',
+//             'od_left_cylinders' => 'required|string|max:10',
+//             'od_left_axis' => 'required|string|max:10',
+//             'od_left_nv_add' => 'required|string|max:10',
+//             'od_left_2_pds' => 'required|string|max:10',
+//             'od_right_sphere' => 'required|string|max:10',
+//             'od_right_cylinders' => 'required|string|max:10',
+//             'od_right_axis' => 'required|string|max:10',
+//             'od_right_nv_add' => 'required|string|max:10',
+//             'od_right_2_pds' => 'required|string|max:10',
+//             'pupil_distance' => 'required|string',
+//             'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+//             'pupil_distance_online' => 'nullable|string',
+//             'od_left_2_pds_online' => 'nullable|string|max:10',
+//             'od_right_2_pds_online' => 'nullable|string|max:10',
+//             'vertical_right' => 'required|string',
+//             'vertical_left' => 'required|string',
+//             'vertical_base_direction_right' => 'required|string',
+//             'vertical_base_direction_left' => 'required|string',
+//             'horizontal_rigth' => 'required|string',
+//             'horizontal_left' => 'required|string',
+//             'horizontal_base_direction_right' => 'required|string',
+//             'horizontal_base_direction_left' => 'required|string',
+//             'special_notes' => 'nullable|string',
+//         ]);
+
+//         if ($validator->fails()) {
+//             return response()->json([
+//                 'status' => false,
+//                 'errors' => $validator->errors()
+//             ], 422);
+//         }
+
+//         $employeeId = auth('sanctum')->user()->employee_id;
+//         $companyId = auth('sanctum')->user()->company_id;
+
+//         $pres = new PrecriptionDetails();
+//         $pres->employee_id = $employeeId;
+
+//         $pres->fill($request->only([
+//             'frame_type',
+//             'frame_prescription',
+//             'od_left_sphere',
+//             'od_left_cylinders',
+//             'od_left_axis',
+//             'od_left_nv_add',
+//             'od_left_2_pds',
+//             'od_right_sphere',
+//             'od_right_cylinders',
+//             'od_right_axis',
+//             'od_right_nv_add',
+//             'od_right_2_pds',
+//             'pupil_distance',
+//             'pupil_distance_online',
+//             'od_left_2_pds_online',
+//             'od_right_2_pds_online',
+//             'vertical_right',
+//             'vertical_left',
+//             'vertical_base_direction_right',
+//             'vertical_base_direction_left',
+//             'horizontal_rigth',
+//             'horizontal_left',
+//             'horizontal_base_direction_right',
+//             'horizontal_base_direction_left',
+//             'special_notes',
+//         ]));
+
+//         if ($request->hasFile('prescription_image')) {
+//             $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
+//         }
+//         if ($request->hasFile('frame_picture')) {
+//             $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
+//         }
+
+//         $pres->save();
+
+//         $order = new Order();
+//         $order->employee_id = $employeeId;
+//         $order->company_id = $companyId;
+//         $order->fill($request->only([
+//             'blue_light_protection',
+//             'order_type',
+//             'lense_material',
+//             'scratch_coating',
+//             'lens_tint',
+//             'lens_protection',
+//             'payment_method',
+//             'product_id',
+//             'product_quantity',
+//             'net_total',
+//             'paid_amount_via_card',
+//             'paid_amount_via_benefit',
+//             'frame_size',
+//             'variant_id'
+//         ]));
+
+//         // Set order status based on payment method
+//         $order->order_status = $request->payment_method === 'pay_later' ? 'pending_payment' : 'pending';
+//         $order->order_confirmation_number = strtoupper(uniqid('CONF'));
+//         $order->prescription_id = $pres->id;
+//         $order->save();
+
+//         $shipping = new ShippingAddress();
+//         $shipping->fill([
+//             'first_name' => $request->input('shipping_first_name'),
+//             'last_name' => $request->input('shipping_last_name'),
+//             'email' => $request->input('shipping_email'),
+//             'country' => $request->input('shipping_country'),
+//             'state' => $request->input('shipping_state'),
+//             'city' => $request->input('shipping_city'),
+//             'address' => $request->input('shipping_address'),
+//             'second_address' => $request->input('shipping_second_address'),
+//             'zip_postal_code' => $request->input('shipping_zip_postal_code'),
+//             'phone_number' => $request->input('shipping_phone_number'),
+//             'additional_information' => $request->input('shipping_additional_information'),
+//         ]);
+
+//         $shipping->order_id = $order->id;
+//         $shipping->save();
+
+//         $billing = new BillingAddress();
+//         $billing->fill([
+//             'first_name' => $request->input('billing_first_name'),
+//             'last_name' => $request->input('billing_last_name'),
+//             'email' => $request->input('billing_email'),
+//             'country' => $request->input('billing_country'),
+//             'state' => $request->input('billing_state'),
+//             'city' => $request->input('billing_city'),
+//             'address' => $request->input('billing_address'),
+//             'second_address' => $request->input('billing_second_address'),
+//             'zip_postal_code' => $request->input('billing_zip_postal_code'),
+//             'phone_number' => $request->input('billing_phone_number'),
+//         ]);
+
+//         $billing->order_id = $order->id;
+//         $billing->save();
+
+//        if ($request->payment_method === 'pay_later') {
+//     Stripe::setApiKey(config('services.stripe.secret'));
+
+//     // Create or retrieve Stripe customer
+//     $customer = Customer::create([
+//         'email' => $request->billing_email,
+//         'name' => $request->billing_first_name . ' ' . $request->billing_last_name,
+//         'phone' => $request->billing_phone_number,
+//         'address' => [
+//             'line1' => $request->billing_address,
+//             'line2' => $request->billing_second_address ?? '',
+//             'city' => $request->billing_city,
+//             'state' => $request->billing_state,
+//             'country' => $request->billing_country,
+//             'postal_code' => $request->billing_zip_postal_code,
+//         ],
+//     ]);
+
+//     // Create invoice item
+//     InvoiceItem::create([
+//         'customer' => $customer->id,
+//         'amount' => $request->net_total * 100, // Amount in cents
+//         'currency' => 'usd', // Adjust currency as needed
+//         'description' => 'Order #' . $order->order_confirmation_number,
+//     ]);
+
+//     // Create and finalize invoice with collection_method set to 'send_invoice'
+//     $invoice = Invoice::create([
+//         'customer' => $customer->id,
+//         'auto_advance' => true,
+//         'collection_method' => 'send_invoice', // Explicitly set collection_method
+//         'days_until_due' => 30, // Optional: Set due date for the invoice (e.g., 30 days)
+//     ]);
+
+//     $invoice->finalizeInvoice();
+//     $invoice->sendInvoice();
+// } else {
+//             // Employee benefit deduction for non-pay_later methods
+//             $employee = Employee::findOrFail($employeeId);
+//             $deductionAmount = $request->net_total;
+
+//             if ($employee->benefit_amount < $deductionAmount) {
+//                 $deductionAmount = $employee->benefit_amount;
+//             }
+//             $employee->benefit_amount -= $deductionAmount;
+//             $employee->save();
+//             $this->deleteEmployeeOrderDetails($employeeId);
+
+//             Transaction::create([
+//                 'employee_id' => $employeeId,
+//                 'transaction_type' => 'debit',
+//                 'amount' => $request->net_total ?? '',
+//                 'balance' => $employee->benefit_amount ?? '',
+//                 'description' => 'order',
+//             ]);
+//         }
+
+//         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+//         $email = $user->email;
+
+//         // Mail::to($email)->send(new OrderConfirmationMail($order));
+
+//         return response()->json([
+//             'status' => true,
+//             'message' => 'Order and prescription details saved successfully.',
+//             'order_confire' => $order->order_confirmation_number,
+//             'order_id' => $order->id,
+//             'prescription_id' => $pres->id,
+//         ]);
+//     }
+
 
     public function existingPresOrder(Request $request)
     {
@@ -405,27 +925,73 @@ class OrderController extends Controller
 
         $billing->order_id = $order->id;
         $billing->save();
-        // Employee benefit deduction
-        $employee = Employee::findOrFail($employeeId);
-        $deductionAmount = $request->net_total;
+        if ($request->payment_method === 'pay_later') {
+            try {
+                Stripe::setApiKey(config('services.stripe.secret'));
 
-        if ($employee->benefit_amount < $deductionAmount) {
-            $deductionAmount = $employee->benefit_amount;
+                $remainingAmount = $request->net_total;
+
+                if ($remainingAmount <= 0) {
+                    throw new \Exception("Invoice amount must be greater than $0.00");
+                }
+
+                // Step 1: Create Stripe Customer
+                $customer = Customer::create([
+                    'email' => $request->billing_email,
+                    'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
+                ]);
+
+                // Step 2: Create Invoice with Payment Link
+                $invoice = \Stripe\Invoice::create([
+                    'customer' => $customer->id,
+                    'collection_method' => 'send_invoice',
+                    'days_until_due' => 30,
+                    'auto_advance' => true, // Automatically finalize this invoice
+                    'description' => 'Order #' . $request->order_id,
+                ]);
+
+                // Add invoice items
+                \Stripe\InvoiceItem::create([
+                    'customer' => $customer->id,
+                    'amount' => $remainingAmount * 100, // Amount in cents
+                    'currency' => 'usd',
+                    'description' => 'Order Payment',
+                    'invoice' => $invoice->id,
+                ]);
+
+                // Finalize and send the invoice
+                $finalizedInvoice = \Stripe\Invoice::retrieve($invoice->id);
+                $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
+                $sentInvoice = $finalizedInvoice->sendInvoice();
+
+                $order->stripe_invoice_id = $sentInvoice->id;
+                $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
+                $order->save();
+
+            } catch (\Exception $e) {
+                Log::error('Stripe Invoice Error: ' . $e->getMessage());
+                return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
+            }
+        } else {
+            // Employee benefit deduction for non-pay_later methods
+            $employee = Employee::findOrFail($employeeId);
+            $deductionAmount = $request->net_total;
+
+            if ($employee->benefit_amount < $deductionAmount) {
+                $deductionAmount = $employee->benefit_amount;
+            }
+            $employee->benefit_amount -= $deductionAmount;
+            $employee->save();
+            $this->deleteEmployeeOrderDetails($employeeId);
+
+            Transaction::create([
+                'employee_id' => $employeeId,
+                'transaction_type' => 'debit',
+                'amount' => $request->net_total ?? '',
+                'balance' => $employee->benefit_amount ?? '',
+                'description' => 'order',
+            ]);
         }
-        $employee->benefit_amount -= $deductionAmount;
-        $employee->save();
-        $this->deleteEmployeeOrderDetails($employeeId);
-
-
-
-
-        Transaction::create([
-            'employee_id' => $employeeId,
-            'transaction_type' => 'debit',
-            'amount' => $request->net_total ?? '',
-            'balance' => $employee->benefit_amount ?? '',
-            'description' => 'order',
-        ]);
 
 
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
@@ -520,7 +1086,10 @@ class OrderController extends Controller
                 'lens_tint:id,title',
                 'lens_protection:id,title',
                 'frame_size:frame_size_id,frame_size_name',
-                'product:product_id,product_name',
+
+
+                'product:product_id,product_name,sku,manufacturer_name', // add manufacturer_name if needed
+                'product.manufacturer:manufacturer_id,manufacturer_name', // nested relation to get manufacturer
                 'variant',
             ])->get();
 
@@ -528,6 +1097,8 @@ class OrderController extends Controller
         $orders = $orders->map(function ($order) {
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
+            unset($order->product->manufacturer_name); // remove original relation if needed
+
             return $order;
         });
 
@@ -559,9 +1130,9 @@ class OrderController extends Controller
                 'scratch_coating:id,title',
                 'lens_tint:id,title',
                 'lens_protection:id,title',
-
                 'frame_size:frame_size_id,frame_size_name',
-                'product:product_id,product_name',
+                'product:product_id,product_name,sku,manufacturer_name', // add manufacturer_name if needed
+                'product.manufacturer:manufacturer_id,manufacturer_name', // nested relation to get manufacturer
                 'variant',
             ])->get();
 
@@ -569,6 +1140,8 @@ class OrderController extends Controller
         $orders = $orders->map(function ($order) {
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
+            unset($order->product->manufacturer_name); // remove original relation if needed
+
             return $order;
         });
 
@@ -599,7 +1172,9 @@ class OrderController extends Controller
             'lens_tint:id,title',
             'lens_protection:id,title',
             'frame_size:frame_size_id,frame_size_name',
-            'product:product_id,product_name',
+
+            'product:product_id,product_name,sku,manufacturer_name', // add manufacturer_name if needed
+            'product.manufacturer:manufacturer_id,manufacturer_name', // nested relation to get manufacturer
             'variant'
         ])->get();
 
@@ -607,6 +1182,9 @@ class OrderController extends Controller
         $orders = $orders->map(function ($order) {
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
+            unset($order->product->manufacturer_name); // remove original relation if needed
+
+
             return $order;
         });
 
@@ -684,7 +1262,7 @@ class OrderController extends Controller
             'color' => 'nullable|integer',
             'frame_size' => 'nullable',
             'product_quantity' => 'nullable|integer|min:1',
-            'net_total' => 'required|numeric|min:0',
+            'net_total' => 'nullable|numeric|min:0',
             'paid_amount_via_benefit ' => 'nullable|numeric|min:0',
             'paid_amount_via_card ' => 'nullable|numeric|min:0',
 

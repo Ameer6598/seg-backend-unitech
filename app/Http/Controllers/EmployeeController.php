@@ -13,6 +13,8 @@ use App\Models\EmployeeProduct;
 use App\Exports\ExportEmployees;
 use App\Imports\ImportEmployees;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Maatwebsite\Excel\Facades\Excel;
@@ -42,23 +44,31 @@ class EmployeeController extends Controller
                 throw new \Exception('The phone number is already in use by a company.');
             }
 
-            $apiKey = env('MIAL_BOX'); // Ensure this is correctly set in .env
-            if (!$apiKey) {
-                throw new \Exception('MailboxLayer API key is missing.');
-            }
-            $response = Http::get("https://apilayer.net/api/check", [
-                'access_key' => $apiKey,
-                'email' => $request->email,
-            ]);
+            $apiKey = env('MIAL_BOX'); // Make sure this is set in .env
 
-            if ($response->failed()) {
-                throw new \Exception('Email validation service is unavailable.');
-            }
+            if ($apiKey) {
+                try {
+                    $response = Http::timeout(10)->get("https://apilayer.net/api/check", [
+                        'access_key' => $apiKey,
+                        'email' => $request->email,
+                    ]);
 
-            $emailData = $response->json();
-
-            if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
-                throw new \Exception('Invalid or non-existent email address.');
+                    if ($response->successful()) {
+                        $emailData = $response->json();
+                        if (
+                            empty($emailData['mx_found']) ||
+                            empty($emailData['smtp_check'])
+                        ) {
+                            throw new \Exception('Invalid or non-existent email address.');
+                        }
+                    } else {
+                        Log::warning('MailboxLayer API failed.', ['body' => $response->body()]);
+                    }
+                } catch (\Exception $ex) {
+                    Log::error('MailboxLayer API error: ' . $ex->getMessage());
+                    // You can optionally throw here if email validation is critical
+                    // throw new \Exception('Email validation service timed out.');
+                }
             }
 
             DB::beginTransaction();
