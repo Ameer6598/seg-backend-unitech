@@ -14,6 +14,7 @@ use App\Mail\ForgotPasswordMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -180,7 +181,23 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        // Logout from current device only
         $request->user()->currentAccessToken()->delete();
-        return $this->successResponse(array('model' => 'users'), 'User Logout successfully', []);
+
+        return $this->successResponse([], 'Successfully logged out from current device');
+    }
+
+    public function logoutAll(Request $request)
+    {
+        $request->user()->tokens()->delete();
+
+        return $this->successResponse([], 'Successfully logged out from all devices');
+    }
+
+
+    public function validateToken(Request $request)
+    {
+        
+        return $this->successResponse([], 'Token is valid');
     }
 }

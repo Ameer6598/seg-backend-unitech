@@ -24,7 +24,7 @@ Route::get('/users', function () {
 });
 
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 Route::post('set/newpassword', [AuthController::class, 'set']);
 
@@ -32,6 +32,10 @@ Route::post('forget/password', [AuthController::class, 'forgetpassword']);
 
 Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
 Route::post('/check-payment-status', [StripeController::class, 'checkPaymentStatus']);
+
+Route::get('/pay-later-orders', [OrderController::class, 'getPayLaterOrders']);
+
+ 
 
 
 
@@ -46,6 +50,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
     });
 
+
+    Route::post('logout', [AuthController::class, 'logout'])->name('logout.current');
+    Route::post('logout/all', [AuthController::class, 'logoutAll'])->name('logout.all');
+   Route::post('check-validation', [AuthController::class, 'validateToken']);
 
     Route::middleware('role:owner')->group(function () {
 
@@ -64,7 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //assign to companies
         Route::post('assign-product-to-company', [CompanyController::class, 'assignProductToCompany']);
-        Route::post('assign-lens_material_to_company',[AssignLensMaterial::class,'AssignLensMaterialToCompany']);
+        Route::post('assign-lens_material_to_company', [AssignLensMaterial::class, 'AssignLensMaterialToCompany']);
         Route::post('assign-scratch_coating-to-company', [AssignScratchCoating::class, 'assignScratchCoatingToCompany']);
         Route::post('assign-lens_tint-to-company', [AssignLenstint::class, 'assignLensTintToCompany']);
         Route::post('assign-lens_protection-to-company', [AssignLensProtection::class, 'assignLensProtectionToCompany']);
@@ -130,7 +138,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('orders/temp-store', [TempOrderController::class, 'saveOrderDetails']);
         Route::get('employee/temp/order-details', [TempOrderController::class, 'getEmployeeOrderDetails']);
     });
-    Route::post('/logout', [AuthController::class, 'logout']);
+
 
     Route::middleware('role:owner,company')->group(function () {
         // Categories
