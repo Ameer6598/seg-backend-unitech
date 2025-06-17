@@ -308,6 +308,8 @@ class EmployeeController extends Controller
             'employee_id.*' => 'exists:employees,id',
             'amount' => 'required|numeric',
             'type' => 'required|in:credit,debit',
+            'starting_date' => 'nullable|date',
+            'ending_date' => 'nullable|date|after_or_equal:starting_date',
         ]);
         try {
             DB::beginTransaction();
@@ -323,6 +325,16 @@ class EmployeeController extends Controller
                 } else {
                     $employee->benefit_amount -= $amount;
                 }
+
+                // Only update dates if provided
+                if (isset($data['starting_date'])) {
+                    $employee->starting_date = $data['starting_date'];
+                }
+                if (isset($data['ending_date'])) {
+                    $employee->ending_date = $data['ending_date'];
+                }
+
+
                 $employee->save();
 
                 $transaction = Transaction::create([

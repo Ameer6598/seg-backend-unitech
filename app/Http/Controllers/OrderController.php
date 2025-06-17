@@ -113,6 +113,16 @@ class OrderController extends Controller
         $employeeId = auth('sanctum')->user()->employee_id;
         $companyId = auth('sanctum')->user()->company_id;
 
+
+        $employee = Employee::findOrFail($employeeId);
+
+        if ($employee->ending_date && \Carbon\Carbon::now()->gt(\Carbon\Carbon::parse($employee->ending_date))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your benefit amount has expired.',
+            ], 403);
+        }
+
         $pres = new PrecriptionDetails();
         $pres->employee_id = $employeeId;
 
@@ -284,7 +294,7 @@ class OrderController extends Controller
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
             }
         } else {
-            // Employee benefit deduction for non-pay_later methods
+
             $employee = Employee::findOrFail($employeeId);
             $deductionAmount = $request->net_total;
 
@@ -484,7 +494,7 @@ class OrderController extends Controller
                     throw new \Exception("Invoice amount must be greater than $0.00");
                 }
 
-                    // Step 1: Create Stripe Customer
+                // Step 1: Create Stripe Customer
                 $customer = Customer::create([
                     'email' => $request->billing_email,
                     'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
@@ -1150,78 +1160,76 @@ class OrderController extends Controller
     }
 
     public function getPayLaterOrders(Request $request)
-{
-    try {
-        // Set Stripe API key
-        Stripe::setApiKey(config('services.stripe.secret'));
+    {
+        try {
+            // Set Stripe API key
+            Stripe::setApiKey(config('services.stripe.secret'));
 
-        // Get all orders with pay_later payment method
-        $orders = Order::where('payment_method', 'pay_later')
-            ->whereNotNull('stripe_invoice_id')
-            ->get();
+            // Get all orders with pay_later payment method
+            $orders = Order::where('payment_method', 'pay_later')
+                ->whereNotNull('stripe_invoice_id')
+                ->get();
 
-        $paidOrders = [];
-        $pendingOrders = [];
+            $paidOrders = [];
+            $pendingOrders = [];
 
-        foreach ($orders as $order) {
-            try {
-                // Retrieve the invoice from Stripe
-                $invoice = \Stripe\Invoice::retrieve($order->stripe_invoice_id);
+            foreach ($orders as $order) {
+                try {
+                    // Retrieve the invoice from Stripe
+                    $invoice = \Stripe\Invoice::retrieve($order->stripe_invoice_id);
 
-                // Check if the invoice is paid
-                if ($invoice->status === 'paid') {
-                    $paidOrders[] = [
-                        'order_id' => $order->id,
-                        'order_confirmation_number' => $order->order_confirmation_number,
-                        'employee_id' => $order->employee_id,
-                        'net_total' => $order->net_total,
-                        'stripe_invoice_id' => $order->stripe_invoice_id,
-                        'payment_status' => 'paid',
-                        'paid_at' => $invoice->status_transitions->paid_at 
-                            ? Carbon::createFromTimestamp($invoice->status_transitions->paid_at)->toDateTimeString()
-                            : null,
-                    ];
-                } else {
+                    // Check if the invoice is paid
+                    if ($invoice->status === 'paid') {
+                        $paidOrders[] = [
+                            'order_id' => $order->id,
+                            'order_confirmation_number' => $order->order_confirmation_number,
+                            'employee_id' => $order->employee_id,
+                            'net_total' => $order->net_total,
+                            'stripe_invoice_id' => $order->stripe_invoice_id,
+                            'payment_status' => 'paid',
+                            'paid_at' => $invoice->status_transitions->paid_at
+                                ? Carbon::createFromTimestamp($invoice->status_transitions->paid_at)->toDateTimeString()
+                                : null,
+                        ];
+                    } else {
+                        $pendingOrders[] = [
+                            'order_id' => $order->id,
+                            'order_confirmation_number' => $order->order_confirmation_number,
+                            'employee_id' => $order->employee_id,
+                            'net_total' => $order->net_total,
+                            'stripe_invoice_id' => $order->stripe_invoice_id,
+                            'payment_status' => $invoice->status,
+                            'invoice_url' => $order->stripe_invoice_url,
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    // Log any Stripe API errors for this order but continue processing others
+                    Log::error('Stripe Invoice Check Error for Order #' . $order->id . ': ' . $e->getMessage());
+                    // Treat as pending if we can't verify status
                     $pendingOrders[] = [
                         'order_id' => $order->id,
                         'order_confirmation_number' => $order->order_confirmation_number,
                         'employee_id' => $order->employee_id,
                         'net_total' => $order->net_total,
                         'stripe_invoice_id' => $order->stripe_invoice_id,
-                        'payment_status' => $invoice->status,
+                        'payment_status' => 'error_checking_status',
                         'invoice_url' => $order->stripe_invoice_url,
                     ];
                 }
-            } catch (\Exception $e) {
-                // Log any Stripe API errors for this order but continue processing others
-                Log::error('Stripe Invoice Check Error for Order #' . $order->id . ': ' . $e->getMessage());
-                // Treat as pending if we can't verify status
-                $pendingOrders[] = [
-                    'order_id' => $order->id,
-                    'order_confirmation_number' => $order->order_confirmation_number,
-                    'employee_id' => $order->employee_id,
-                    'net_total' => $order->net_total,
-                    'stripe_invoice_id' => $order->stripe_invoice_id,
-                    'payment_status' => 'error_checking_status',
-                    'invoice_url' => $order->stripe_invoice_url,
-                ];
             }
+
+            return response()->json([
+                'status' => true,
+                'paid_orders' => $paidOrders,
+                'pending_orders' => $pendingOrders,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Get Pay Later Orders Error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch pay later orders.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json([
-            'status' => true,
-            'paid_orders' => $paidOrders,
-            'pending_orders' => $pendingOrders,
-        ], 200);
-
-    } catch (\Exception $e) {
-        Log::error('Get Pay Later Orders Error: ' . $e->getMessage());
-        return response()->json([
-            'status' => false,
-            'message' => 'Failed to fetch pay later orders.',
-            'error' => $e->getMessage(),
-        ], 500);
     }
-}
-
 }
