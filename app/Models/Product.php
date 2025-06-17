@@ -39,6 +39,10 @@ class Product extends Model
         return $this->belongsToMany(FrameSize::class, 'product_frame_size', 'product_id', 'frame_size_id');
     }
 
+    public function productCategories()
+    {
+        return $this->belongsToMany(Category::class, 'product_categories', 'product_id', 'category_id');
+    }
 
     public function rimtype()
     {
