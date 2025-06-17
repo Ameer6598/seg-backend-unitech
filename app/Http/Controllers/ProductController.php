@@ -42,7 +42,6 @@ class ProductController extends Controller
                 'product_tags' => 'nullable|array',
                 'product_tags.*' => 'string',
                 'description' => 'required|string',
-                'category' => 'required|numeric',
                 'sub_category' => 'nullable|numeric',
                 'gender' => 'required|string',
                 'rim_type' => 'required|numeric',
@@ -70,6 +69,10 @@ class ProductController extends Controller
                 'product_status' => 'required|numeric',
                 'frame_sizes' => 'required|array', // array will come of this 
                 'frame_sizes.*' => 'numeric', // ensuring each frame size id in the array is numeric 
+                'product_categories' => 'required|array', // array will come of this 
+                'product_categories.*' => 'numeric', // ensuring each frame size id in the array is numeric 
+
+
                 'featured_image' => 'required|image|max:2048', // Added validation for featured image
 
                 'variants' => 'required|array',
@@ -90,7 +93,7 @@ class ProductController extends Controller
             DB::beginTransaction();
 
             // Save main product
-            $input = $request->except('variants', 'product_tags', 'frame_sizes', 'frame_features');
+            $input = $request->except('variants', 'product_tags', 'frame_sizes', 'product_categories', 'frame_features');
             if ($request->has('product_tags')) {
                 $input['product_tags'] = implode(',', $request->product_tags);
             }
@@ -135,7 +138,9 @@ class ProductController extends Controller
             if ($request->has('frame_sizes')) {
                 $product->frameSizes()->attach($request->frame_sizes);
             }
-
+            if ($request->has('product_categories')) {
+                $product->productCategories()->attach($request->product_categories);
+            }
 
 
             // $companies = DB::table('companies')->select('id')->get();
@@ -168,7 +173,7 @@ class ProductController extends Controller
                 'product_tags' => 'nullable|array',
                 'product_tags.*' => 'string',
                 'description' => 'required|string',
-                'category' => 'required|numeric',
+
                 'sub_category' => 'nullable|numeric',
                 'gender' => 'required|string',
                 'rim_type' => 'required|numeric',
@@ -196,6 +201,8 @@ class ProductController extends Controller
                 'product_status' => 'required|numeric',
                 'frame_sizes' => 'required|array',
                 'frame_sizes.*' => 'numeric',
+                'product_categories' => 'required|array', // array will come of this 
+                'product_categories.*' => 'numeric', // ensuring each frame size id in the array is numeric 
                 'featured_image' => 'nullable|image|max:2048', // Added validation for featured image
 
 
@@ -217,7 +224,7 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
 
             // Update main product
-            $input = $request->except('variants', 'product_tags', 'frame_sizes', 'frame_features', 'featured_image');
+            $input = $request->except('variants', 'product_tags', 'frame_sizes', 'product_categories', 'frame_features', 'featured_image');
 
 
             if ($request->has('product_tags')) {
@@ -246,6 +253,12 @@ class ProductController extends Controller
             if ($request->has('frame_sizes')) {
                 $product->frameSizes()->sync($request->frame_sizes);
             }
+
+            // Update frame sizes
+            if ($request->has('product_categories')) {
+                $product->productCategories()->sync($request->product_categories);
+            }
+
 
             // Get existing variant IDs to detect which ones to delete
             $existingVariantIds = $product->variants->pluck('id')->toArray();
@@ -363,7 +376,7 @@ class ProductController extends Controller
                 ]);
             } else {
                 $products = Product::with([
-                    'productcategory:category_id,category_name',
+                    'productCategories:category_id,category_name',
                     'productsubcate:id,category_id,subcategory_name',
                     'frameSizes:frame_size_id,frame_size_name',
                     'rimtype:rim_type_id,rim_type_name',
@@ -468,7 +481,7 @@ class ProductController extends Controller
 
             $products = Product::with([
 
-                'productcategory:category_id,category_name',
+                'productCategories:category_id,category_name',
                 'productsubcate:id,category_id,subcategory_name',
                 'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
@@ -557,7 +570,7 @@ class ProductController extends Controller
             $mediaURL = env('BASE_URL');
 
             $productsQuery = Product::with([
-                'productcategory:category_id,category_name',
+                'productCategories:category_id,category_name',
                 'productsubcate:id,category_id,subcategory_name',
                 'frameSizes:frame_size_id,frame_size_name',
                 'rimtype:rim_type_id,rim_type_name',
@@ -658,6 +671,8 @@ class ProductController extends Controller
             $product = Product::findOrFail($productId);
 
             $product->frameSizes()->detach();
+            $product->productCategories()->detach();
+
 
             CompanyProduct::where('product_id', $product->product_id)->delete();
             EmployeeProduct::where('product_id', $product->product_id)->delete();
