@@ -57,7 +57,19 @@ class lensManegmentController extends Controller
             'title' => 'required|string|max:255',
             'sub_title' => 'required|string|max:255',
             'image' => 'required|file',
-            'price' => 'required|numeric|min:0',
+
+            'single_vision_price' => 'nullable|numeric|min:0',
+            'lined_bifocal_lenses_price' => 'nullable|numeric|min:0',
+            'no_line_progressive_lenses_price' => 'nullable|numeric|min:0',
+            'trifocal_lenses_price' => 'nullable|numeric|min:0',
+            'full_readers_price' => 'nullable|numeric|min:0',
+            'half_readers_price' => 'nullable|numeric|min:0',
+            'non_prescription_plano_lenses_price' => 'nullable|numeric|min:0',
+
+
+
+
+
             'description' => 'required|string',
         ]);
 
@@ -88,7 +100,16 @@ class lensManegmentController extends Controller
             'title' => $request->title,
             'sub_title' => $request->sub_title,
             'image_url' => $imagepath,
-            'price' => $request->price,
+            // Prices
+            'single_vision_price' => $request->single_vision_price,
+            'lined_bifocal_lenses_price' => $request->lined_bifocal_lenses_price,
+            'no_line_progressive_lenses_price' => $request->no_line_progressive_lenses_price,
+            'trifocal_lenses_price' => $request->trifocal_lenses_price,
+            'full_readers_price' => $request->full_readers_price,
+            'half_readers_price' => $request->half_readers_price,
+            'non_prescription_plano_lenses_price' => $request->non_prescription_plano_lenses_price,
+
+
             'description' => $request->description,
         ]);
 
@@ -101,14 +122,20 @@ class lensManegmentController extends Controller
 
     public function update(Request $request, $id)
     {
-
-
-
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'sub_title' => 'required|string|max:255',
             'image' => 'nullable|file',
-            'price' => 'required|numeric|min:0',
+
+            // Updated price fields
+            'single_vision_price' => 'nullable|numeric|min:0',
+            'lined_bifocal_lenses_price' => 'nullable|numeric|min:0',
+            'no_line_progressive_lenses_price' => 'nullable|numeric|min:0',
+            'trifocal_lenses_price' => 'nullable|numeric|min:0',
+            'full_readers_price' => 'nullable|numeric|min:0',
+            'half_readers_price' => 'nullable|numeric|min:0',
+            'non_prescription_plano_lenses_price' => 'nullable|numeric|min:0',
+
             'description' => 'required|string',
         ]);
 
@@ -128,8 +155,9 @@ class lensManegmentController extends Controller
             ], 404);
         }
 
-        $imagepath = $material->image_url; // default to existing image
+        $imagepath = $material->image_url;
 
+        // Handle image replacement
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $originalName = $file->getClientOriginalName();
@@ -142,7 +170,7 @@ class lensManegmentController extends Controller
             $file->move($destinationPath, $fileName);
             $imagepath = '/projectimages/lensmanegment/material/' . $fileName;
 
-            // Delete old image file if exists
+            // Delete old image
             $oldImagePath = public_path($material->image_url);
             if (file_exists($oldImagePath)) {
                 unlink($oldImagePath);
@@ -153,8 +181,16 @@ class lensManegmentController extends Controller
             'title' => $request->title,
             'sub_title' => $request->sub_title,
             'image_url' => $imagepath,
-            'price' => $request->price,
             'description' => $request->description,
+
+
+            'single_vision_price' => $request->single_vision_price,
+            'lined_bifocal_lenses_price' => $request->lined_bifocal_lenses_price,
+            'no_line_progressive_lenses_price' => $request->no_line_progressive_lenses_price,
+            'trifocal_lenses_price' => $request->trifocal_lenses_price,
+            'full_readers_price' => $request->full_readers_price,
+            'half_readers_price' => $request->half_readers_price,
+            'non_prescription_plano_lenses_price' => $request->non_prescription_plano_lenses_price,
         ]);
 
         return response()->json([
@@ -163,6 +199,7 @@ class lensManegmentController extends Controller
             'data' => $material,
         ]);
     }
+
 
     public function delete($id)
     {
