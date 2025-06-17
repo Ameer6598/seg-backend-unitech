@@ -396,7 +396,6 @@ class ProductController extends Controller
 
                     $product->featured_image = $mediaURL . $product->featured_image;
 
-                    unset($product->category);
                     unset($product->sub_category);
                     unset($product->rim_type);
                     unset($product->manufacturer_name);
@@ -405,6 +404,15 @@ class ProductController extends Controller
                         unset($frameSize->pivot); // Remove the pivot attribute
                         return $frameSize;
                     });
+
+                    if ($product->productCategories) {
+                        $product->productCategories->map(function ($product_categories) {
+                            unset($product_categories->pivot);
+                            return $product_categories;
+                        });
+                    }
+
+
 
                     if (!empty($product->product_tags)) {
                         $product->product_tags = collect(explode(',', $product->product_tags))
