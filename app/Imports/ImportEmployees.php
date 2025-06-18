@@ -25,26 +25,30 @@ class ImportEmployees implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
-        $apiKey = env('MIAL_BOX'); // Ensure correct key name in .env
-
-        if (!$apiKey) {
-            $this->errors[] = 'MailboxLayer API key is missing.';
-            return;
-        }
-
+       
         foreach ($rows as $index => $row) {
             try {
-                // Validate row data
-                $validator = Validator::make($row->toArray(), [
+
+                $phone = $row['phone'] ?? '';
+
+                $isNA = strtoupper(trim($phone)) === 'N/A' || !preg_match('/^\d+$/', $phone);
+
+                $validationRules = [
                     'username' => 'required',
                     'email' => 'required|email|unique:users,email',
-                    'phone' => 'required|unique:employees,phone',
                     'designation' => 'required',
-                ]);
+                ];
+
+                if (!$isNA) {
+                    $validationRules['phone'] = 'required';
+                } else {
+                    $validationRules['phone'] = 'required';
+                }
+
+                $validator = Validator::make($row->toArray(), $validationRules);
 
                 if ($validator->fails()) {
                     foreach ($validator->errors()->all() as $error) {
-                        // Customize error messages based on the field
                         if (str_contains($error, 'email')) {
                             $this->errors[] = "Row " . ($index + 2) . ": The email '" . $row['email'] . "' has already been taken.";
                         } elseif (str_contains($error, 'phone')) {
@@ -56,26 +60,11 @@ class ImportEmployees implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                if (Company::where('phone', $row['phone'])->exists()) {
-                    $this->errors[] = "Row " . ($index + 2) . ": The phone number '" . $row['phone'] . "' is already in use by a company.";
-                    continue;
-                }
+                
+                
 
-                $response = Http::get("https://apilayer.net/api/check", [
-                    'access_key' => $apiKey,
-                    'email' => $row['email'],
-                ]);
-
-                if ($response->failed()) {
-                    $this->errors[] = "Row " . ($index + 2) . ": Email validation service is unavailable for '" . $row['email'] . "'.";
-                    continue;
-                }
-
-                $emailData = $response->json();
-
-                if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
-                    $this->errors[] = "Row " . ($index + 2) . ": Invalid or non-existent email address '" . $row['email'] . "'.";
-                    continue;
+                if ($isNA) {
+                    $phone = 'N/A';
                 }
 
                 DB::beginTransaction();
@@ -83,7 +72,7 @@ class ImportEmployees implements ToCollection, WithHeadingRow
                 $employee = Employee::create([
                     'designation' => $row['designation'] ?? '',
                     'status' => 'Active',
-                    'phone' => $row['phone'] ?? '',
+                    'phone' => $phone,
                     'benefit_amount' => 0,
                     'company_id' => auth('sanctum')->user()->company_id,
                 ]);

@@ -36,12 +36,12 @@ class OrderController extends Controller
     public function newPresOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'blue_light_protection' => 'required|string',
-            'order_type' => 'required|string|max:255',
-            'lense_material' => 'required|string|max:255',
-            'scratch_coating' => 'required',
-            'lens_tint' => 'required|string|max:255',
-            'lens_protection' => 'required|string|max:255',
+            'blue_light_protection' => 'nullable|string',
+            'order_type' => 'nullable|string|max:255',
+            'lense_material' => 'nullable|string|max:255',
+            'scratch_coating' => 'nullable',
+            'lens_tint' => 'nullable|string|max:255',
+            'lens_protection' => 'nullable|string|max:255',
             // Billing details
             'billing_first_name' => 'required|string|max:255',
             'billing_last_name' => 'required|string|max:255',
@@ -195,7 +195,7 @@ class OrderController extends Controller
         if ($lastOrder) {
             $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
         } else {
-            $nextConfirmationNumber = 10001;
+            $nextConfirmationNumber = 100001;
         }
 
         $order->order_confirmation_number = $nextConfirmationNumber;
@@ -435,9 +435,9 @@ class OrderController extends Controller
         if ($lastOrder) {
             $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
         } else {
-            $nextConfirmationNumber = 10001;
+            $nextConfirmationNumber = 100001;
         }
-
+        
         $order->order_confirmation_number = $nextConfirmationNumber;
 
         // Save order

@@ -33,43 +33,12 @@ class EmployeeController extends Controller
             $request->validate([
                 'username' => 'required',
                 'email' => 'required|email|unique:users,email',
-                'phone' => 'required|unique:employees,phone', // Checks uniqueness in employees table
+                'phone' => 'required',
                 'password' => 'required',
                 'designation' => 'required',
                 'benefit_amount' => ['nullable', 'numeric'],
             ]);
-
-            // Manual check for phone number in companies table
-            if (\App\Models\Company::where('phone', $request->phone)->exists()) {
-                throw new \Exception('The phone number is already in use by a company.');
-            }
-
-            $apiKey = env('MIAL_BOX'); // Make sure this is set in .env
-
-            if ($apiKey) {
-                try {
-                    $response = Http::timeout(10)->get("https://apilayer.net/api/check", [
-                        'access_key' => $apiKey,
-                        'email' => $request->email,
-                    ]);
-
-                    if ($response->successful()) {
-                        $emailData = $response->json();
-                        if (
-                            empty($emailData['mx_found']) ||
-                            empty($emailData['smtp_check'])
-                        ) {
-                            throw new \Exception('Invalid or non-existent email address.');
-                        }
-                    } else {
-                        Log::warning('MailboxLayer API failed.', ['body' => $response->body()]);
-                    }
-                } catch (\Exception $ex) {
-                    Log::error('MailboxLayer API error: ' . $ex->getMessage());
-                    // You can optionally throw here if email validation is critical
-                    // throw new \Exception('Email validation service timed out.');
-                }
-            }
+    
 
             DB::beginTransaction();
             $employee = Employee::create([

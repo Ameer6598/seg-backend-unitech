@@ -30,7 +30,7 @@ class OrderConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Order Confirmation - ' . $this->order->order_confirmation_number,
+            subject: 'Order Confirmation - Your Safety Eyewear is Being Processed at Safety Eye Guard!',
         );
     }
 

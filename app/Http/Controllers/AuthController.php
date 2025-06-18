@@ -75,6 +75,8 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'id' => $user->employee_id,
                 'phone_no' => optional($user->Employedata)->phone,
+                'benefits' => optional($user->Companydata)->benefits,
+
             ];
         } elseif ($user->role === 'company') {
             $filteredUserData = [
