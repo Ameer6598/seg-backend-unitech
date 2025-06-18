@@ -35,31 +35,10 @@ class CompanyController extends Controller
                 'password' => 'required|string|min:6',
                 'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
                 'company_Information' => 'nullable|string',
+                'benefits' => 'nullable|string',
             ]);
 
-            // Manual check for phone number in employees table
-            if (\App\Models\Employee::where('phone', $request->phone)->exists()) {
-                throw new \Exception('The phone number is already in use by an employee.');
-            }
 
-            $apiKey = env('MIAL_BOX'); // Ensure this is correctly set in .env
-            if (!$apiKey) {
-                throw new \Exception('MailboxLayer API key is missing.');
-            }
-            $response = Http::get("https://apilayer.net/api/check", [
-                'access_key' => $apiKey,
-                'email' => $request->email,
-            ]);
-
-            if ($response->failed()) {
-                throw new \Exception('Email validation service is unavailable.');
-            }
-
-            $emailData = $response->json();
-
-            if (!isset($emailData['mx_found']) || !$emailData['mx_found'] || !isset($emailData['smtp_check']) || !$emailData['smtp_check']) {
-                throw new \Exception('Invalid or non-existent email address.');
-            }
 
             DB::beginTransaction();
 
@@ -82,6 +61,7 @@ class CompanyController extends Controller
                 'phone' => $request->phone ?? '',
                 'company_logo' => $logoPath,
                 'company_Information' => $request->company_Information,
+                     'benefits' => $request->benefits,
             ]);
 
             $user = User::create([
@@ -120,6 +100,8 @@ class CompanyController extends Controller
                 'status' => 'required|in:0,1', // Correct syntax for in rule
                 'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'company_Information' => 'nullable|string',
+                'benefits' => 'nullable|string',
+
 
             ]);
             DB::beginTransaction();
@@ -157,6 +139,7 @@ class CompanyController extends Controller
                 'phone' => $request->phone ?? $company->phone,
                 'company_logo' => $logoPath,
                 'company_Information' => $request->company_Information,
+                'benefits' => $request->benefits,
             ]);
 
             $user->update([
