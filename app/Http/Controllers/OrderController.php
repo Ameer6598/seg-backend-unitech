@@ -9,6 +9,7 @@ use App\Models\User;
 use Stripe\Customer;
 use App\Models\Order;
 use App\Traits\Common;
+use App\Models\Company;
 use Stripe\InvoiceItem;
 use App\Models\Employee;
 use App\Models\Transaction;
@@ -76,7 +77,7 @@ class OrderController extends Controller
             // Prescription fields
             'frame_type' => 'required|string|max:255',
             'frame_prescription' => 'required|string|max:255',
-            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'prescription_image' => 'nullable|image|max:2048',
             'od_left_sphere' => 'required|string|max:10',
             'od_left_cylinders' => 'required|string|max:10',
             'od_left_axis' => 'required|string|max:10',
@@ -88,7 +89,7 @@ class OrderController extends Controller
             'od_right_nv_add' => 'required|string|max:10',
             'od_right_2_pds' => 'required|string|max:10',
             'pupil_distance' => 'required|string',
-            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'frame_picture' => 'nullable|image|max:2048',
             'pupil_distance_online' => 'nullable|string',
             'od_left_2_pds_online' => 'nullable|string|max:10',
             'od_right_2_pds_online' => 'nullable|string|max:10',
@@ -195,7 +196,7 @@ class OrderController extends Controller
         if ($lastOrder) {
             $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
         } else {
-            $nextConfirmationNumber = 100001;
+            $nextConfirmationNumber = 100021;
         }
 
         $order->order_confirmation_number = $nextConfirmationNumber;
@@ -435,9 +436,9 @@ class OrderController extends Controller
         if ($lastOrder) {
             $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
         } else {
-            $nextConfirmationNumber = 100001;
+            $nextConfirmationNumber = 100021;
         }
-        
+
         $order->order_confirmation_number = $nextConfirmationNumber;
 
         // Save order
@@ -584,6 +585,17 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
+
+    public function companylist(Request $request)
+    {
+
+        $companies = Company::select('id','company_Information')->get();
+
+        return $this->successResponse(['model' => 'company'], 'Companies Details successfully', [
+            'companies' => $companies,
+        ]);
+    }
+
     public function deleteEmployeeOrderDetails($employeeId)
     {
 
@@ -644,8 +656,6 @@ class OrderController extends Controller
                 'lens_tint:id,title',
                 'lens_protection:id,title',
                 'frame_size:frame_size_id,frame_size_name',
-
-
                 'product:product_id,product_name,sku,manufacturer_name', // add manufacturer_name if needed
                 'product.manufacturer:manufacturer_id,manufacturer_name', // nested relation to get manufacturer
                 'variant',
@@ -818,7 +828,7 @@ class OrderController extends Controller
             // Prescription fields
             'frame_type' => 'nullable|string|max:255',
             'frame_prescription' => 'nullable|string|max:255',
-            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'prescription_image' => 'nullable|image|max:2048',
             'od_left_sphere' => 'nullable|string|max:10',
             'od_left_cylinders' => 'nullable|string|max:10',
             'od_left_axis' => 'nullable|string|max:10',
@@ -830,7 +840,7 @@ class OrderController extends Controller
             'od_right_nv_add' => 'nullable|string|max:10',
             'od_right_2_pds' => 'nullable|string|max:10',
             'pupil_distance' => 'nullable|string',
-            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'frame_picture' => 'nullable|image|max:2048',
             'pupil_distance_online' => 'nullable|string',
             'od_left_2_pds_online' => 'nullable|string|max:10',
             'od_right_2_pds_online' => 'nullable|string|max:10',
@@ -1063,7 +1073,7 @@ class OrderController extends Controller
                 'od_right_nv_add' => 'nullable|string',
                 'od_right_2_pds' => 'nullable|string',
                 'lense_use' => 'nullable|string',
-                'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'frame_picture' => 'nullable|image|max:2048',
                 'product_details' => 'nullable|string',
                 'lense_material' => 'nullable|string',
                 'scratch_coating' => 'nullable|string',
