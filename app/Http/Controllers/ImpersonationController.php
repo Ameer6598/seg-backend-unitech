@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
-use App\Models\Employee;
 use App\Models\User;
 use App\Models\Order;
-use Illuminate\Validation\ValidationException;
+use App\Models\Company;
+use App\Models\Employee;
 use App\Traits\ApiResponse;
-
 use Illuminate\Http\Request;
+
+use App\Models\PrecriptionDetails;
+use Illuminate\Validation\ValidationException;
 
 class ImpersonationController extends Controller
 {
@@ -103,6 +104,9 @@ class ImpersonationController extends Controller
 
         $user->load(['Employedata', 'Companydata']);
 
+        $latestPrescription = PrecriptionDetails::where('employee_id', $user->employee_id)->latest()->first();
+
+
         $filteredUserData = [
             'id' => $user->company_id,
             'username' => $user->name,
@@ -111,6 +115,9 @@ class ImpersonationController extends Controller
             'phone_no' => optional($user->Companydata)->phone,
             'benefits' => optional($user->Companydata)->benefits,
             'address' => optional($user->Companydata)->address,
+
+            'last_prescription' => $latestPrescription,
+
 
         ];
 

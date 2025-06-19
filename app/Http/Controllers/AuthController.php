@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
 use App\Mail\ForgotPasswordMail;
+use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -21,7 +22,6 @@ class AuthController extends Controller
 {
     //
     use ApiResponse;
-
 
 
     public function login(Request $request)
@@ -48,12 +48,17 @@ class AuthController extends Controller
         $user->load(['Employedata', 'Companydata']); // Eager load relationships
         $filteredUserData = [];
         if ($user->role === 'employee') {
+
+
+         $latestPrescription = PrecriptionDetails::where('employee_id', $user->employee_id)->latest()->first();
+
             $filteredUserData = [
                 'name' => $user->name,
                 'email' => $user->email,
                 'id' => $user->employee_id,
                 'phone_no' => optional($user->Employedata)->phone,
                 'benefits' => optional($user->Companydata)->benefits,
+                'last_prescription'=> $latestPrescription,
 
             ];
         } elseif ($user->role === 'company') {
