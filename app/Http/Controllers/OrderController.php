@@ -501,9 +501,6 @@ class OrderController extends Controller
             ], 404);
         }
 
-
-
-
         $order = new Order();
         $order->employee_id = $employeeId;
         $order->company_id = $companyId;
@@ -535,10 +532,6 @@ class OrderController extends Controller
         } else {
             $order->order_status = 'pending';
         }
-
-
-
-
 
         $order->prescription_id = $latestPrescription->id;
 
@@ -761,81 +754,6 @@ class OrderController extends Controller
             }
         }
 
-        // if ($request->payment_method === 'pay_later') {
-        //     try {
-        //         Stripe::setApiKey(config('services.stripe.secret'));
-
-        //         $remainingAmount = $request->net_total;
-
-        //         if ($remainingAmount <= 0) {
-        //             throw new \Exception("Invoice amount must be greater than $0.00");
-        //         }
-
-        //         // Step 1: Create Stripe Customer
-        //         $customer = Customer::create([
-        //             'email' => $request->billing_email,
-        //             'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
-        //             'phone' => $request->billing_phone_number,
-        //             'address' => [
-        //                 'line1' => $request->billing_address,
-        //                 'line2' => $request->billing_second_address ?? '',
-        //                 'city' => $request->billing_city,
-        //                 'state' => $request->billing_state,
-        //                 'country' => $request->billing_country,
-        //                 'postal_code' => $request->billing_zip_postal_code,
-        //             ],
-        //         ]);
-
-        //         // Step 2: Create Invoice with Payment Link
-        //         $invoice = \Stripe\Invoice::create([
-        //             'customer' => $customer->id,
-        //             'collection_method' => 'send_invoice',
-        //             'days_until_due' => 30,
-        //             'auto_advance' => true, // Automatically finalize this invoice
-        //             'description' => 'Order #' . $request->order_id,
-        //         ]);
-
-        //         // Add invoice items
-        //         \Stripe\InvoiceItem::create([
-        //             'customer' => $customer->id,
-        //             'amount' => $remainingAmount * 100, // Amount in cents
-        //             'currency' => 'usd',
-        //             'description' => 'Order Payment',
-        //             'invoice' => $invoice->id,
-        //         ]);
-
-        //         // Finalize and send the invoice
-        //         $finalizedInvoice = \Stripe\Invoice::retrieve($invoice->id);
-        //         $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
-        //         $sentInvoice = $finalizedInvoice->sendInvoice();
-
-        //         $order->stripe_invoice_id = $sentInvoice->id;
-        //         $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
-        //         $order->save();
-        //     } catch (\Exception $e) {
-        //         Log::error('Stripe Invoice Error: ' . $e->getMessage());
-        //         return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
-        //     }
-        // } else {
-        //     // Employee benefit deduction for non-pay_later methods
-        //     $employee = Employee::findOrFail($employeeId);
-        //     $deductionAmount = $request->net_total;
-
-        //     if ($employee->benefit_amount < $deductionAmount) {
-        //         $deductionAmount = $employee->benefit_amount;
-        //     }
-        //     $employee->benefit_amount -= $deductionAmount;
-        //     $employee->save();
-        //     $this->deleteEmployeeOrderDetails($employeeId);
-
-        //     Transaction::create([
-        //         'employee_id' => $employeeId,
-        //         'transaction_type' => 'debit',
-        //         'amount' => $request->net_total ?? '',
-        //         'balance' => $employee->benefit_amount ?? '',
-        //         'description' => 'order',
-        //     ]);
-        // }
 
 
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
