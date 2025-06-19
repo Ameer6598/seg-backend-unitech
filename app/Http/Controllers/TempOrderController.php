@@ -25,7 +25,7 @@ class TempOrderController extends Controller
                     'order_type' => 'required|string|max:255',
                     'frame_type' => 'required|string|max:255',
                     'frame_prescription' => 'required|string|max:255',
-                    'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                    'prescription_image' => 'nullable|image|max:2048',
                     'od_left_sphere' => 'required|string|max:10',
                     'od_left_cylinders' => 'required|string|max:10',
                     'od_left_axis' => 'required|string|max:10',
@@ -102,7 +102,7 @@ class TempOrderController extends Controller
                 $temorderdetails->save();
             } elseif ($step == 2) {
                 $request->validate([
-                    'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                    'frame_picture' => 'nullable|image|max:2048',
                     'pupil_distance_online' => 'nullable|string',
                     'od_left_2_pds_online' => 'nullable|string|max:10',
                     'od_right_2_pds_online' => 'nullable|string|max:10',

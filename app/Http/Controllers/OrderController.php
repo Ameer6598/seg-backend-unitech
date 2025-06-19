@@ -9,6 +9,7 @@ use App\Models\User;
 use Stripe\Customer;
 use App\Models\Order;
 use App\Traits\Common;
+use App\Models\Company;
 use Stripe\InvoiceItem;
 use App\Models\Employee;
 use App\Models\Transaction;
@@ -35,6 +36,7 @@ class OrderController extends Controller
     use Common;
     public function newPresOrder(Request $request)
     {
+
         $validator = Validator::make($request->all(), [
             'blue_light_protection' => 'nullable|string',
             'order_type' => 'nullable|string|max:255',
@@ -76,7 +78,7 @@ class OrderController extends Controller
             // Prescription fields
             'frame_type' => 'required|string|max:255',
             'frame_prescription' => 'required|string|max:255',
-            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'prescription_image' => 'nullable|image|max:2048',
             'od_left_sphere' => 'required|string|max:10',
             'od_left_cylinders' => 'required|string|max:10',
             'od_left_axis' => 'required|string|max:10',
@@ -88,7 +90,7 @@ class OrderController extends Controller
             'od_right_nv_add' => 'required|string|max:10',
             'od_right_2_pds' => 'required|string|max:10',
             'pupil_distance' => 'required|string',
-            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'frame_picture' => 'nullable|image|max:2048',
             'pupil_distance_online' => 'nullable|string',
             'od_left_2_pds_online' => 'nullable|string|max:10',
             'od_right_2_pds_online' => 'nullable|string|max:10',
@@ -163,6 +165,8 @@ class OrderController extends Controller
 
         $pres->save();
 
+
+
         $order = new Order();
         $order->employee_id = $employeeId;
         $order->company_id = $companyId;
@@ -183,8 +187,17 @@ class OrderController extends Controller
             'variant_id'
         ]));
 
-        // Set order status based on payment method
-        $order->order_status = $request->payment_method === 'pay_later' ? 'pending_payment' : 'pending';
+        if ($request->payment_method === 'pay_later') {
+            $order->order_status = 'pending_payment';
+        } else if ($order->payment_method === 'Benefit Amount + Pay Later') {
+
+            $order->order_status = 'pending_payment';
+        } else {
+            $order->order_status = 'pending';
+        }
+
+
+
         $order->prescription_id = $pres->id;
 
         // Generate custom sequential confirmation number starting from 10001
@@ -195,7 +208,7 @@ class OrderController extends Controller
         if ($lastOrder) {
             $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
         } else {
-            $nextConfirmationNumber = 100001;
+            $nextConfirmationNumber = 100021;
         }
 
         $order->order_confirmation_number = $nextConfirmationNumber;
@@ -238,6 +251,7 @@ class OrderController extends Controller
 
         $billing->order_id = $order->id;
         $billing->save();
+
         if ($request->payment_method === 'pay_later') {
             try {
                 Stripe::setApiKey(config('services.stripe.secret'));
@@ -248,7 +262,7 @@ class OrderController extends Controller
                     throw new \Exception("Invoice amount must be greater than $0.00");
                 }
 
-                // Step 1: Create Stripe Customer
+                // Create Stripe Customer
                 $customer = Customer::create([
                     'email' => $request->billing_email,
                     'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
@@ -263,17 +277,17 @@ class OrderController extends Controller
                     ],
                 ]);
 
-                // Step 2: Create Invoice with Payment Link
-                $invoice = \Stripe\Invoice::create([
+                // Create Invoice with Payment Link
+                $invoice = Invoice::create([
                     'customer' => $customer->id,
                     'collection_method' => 'send_invoice',
                     'days_until_due' => 30,
-                    'auto_advance' => true, // Automatically finalize this invoice
+                    'auto_advance' => true,
                     'description' => 'Order #' . $request->order_id,
                 ]);
 
                 // Add invoice items
-                \Stripe\InvoiceItem::create([
+                InvoiceItem::create([
                     'customer' => $customer->id,
                     'amount' => $remainingAmount * 100, // Amount in cents
                     'currency' => 'usd',
@@ -282,7 +296,7 @@ class OrderController extends Controller
                 ]);
 
                 // Finalize and send the invoice
-                $finalizedInvoice = \Stripe\Invoice::retrieve($invoice->id);
+                $finalizedInvoice = Invoice::retrieve($invoice->id);
                 $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
                 $sentInvoice = $finalizedInvoice->sendInvoice();
 
@@ -293,26 +307,112 @@ class OrderController extends Controller
                 Log::error('Stripe Invoice Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
             }
-        } else {
-
-            $employee = Employee::findOrFail($employeeId);
-            $deductionAmount = $request->net_total;
-
-            if ($employee->benefit_amount < $deductionAmount) {
-                $deductionAmount = $employee->benefit_amount;
-            }
-            $employee->benefit_amount -= $deductionAmount;
-            $employee->save();
-            $this->deleteEmployeeOrderDetails($employeeId);
-
-            Transaction::create([
-                'employee_id' => $employeeId,
-                'transaction_type' => 'debit',
-                'amount' => $request->net_total ?? '',
-                'balance' => $employee->benefit_amount ?? '',
-                'description' => 'order',
-            ]);
         }
+        // Case 2: Benefit + Credit
+        elseif ($request->payment_method === 'benefit_pay_later') {
+            try {
+                $employee = Employee::findOrFail($employeeId);
+                $remainingAmount = $request->net_total;
+                $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+
+                // Deduct from employee benefit
+                if ($deductionAmount > 0) {
+                    $employee->benefit_amount -= $deductionAmount;
+                    $employee->save();
+
+                    Transaction::create([
+                        'employee_id' => $employeeId,
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $employee->benefit_amount,
+                        'description' => 'Order payment from benefit',
+                    ]);
+
+                    $this->deleteEmployeeOrderDetails($employeeId);
+                    $remainingAmount -= $deductionAmount;
+                }
+
+                // Process remaining amount via Stripe if any
+                if ($remainingAmount > 0) {
+                    Stripe::setApiKey(config('services.stripe.secret'));
+
+                    if ($remainingAmount <= 0) {
+                        throw new \Exception("Invoice amount must be greater than $0.00");
+                    }
+
+                    // Create Stripe Customer
+                    $customer = Customer::create([
+                        'email' => $request->billing_email,
+                        'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
+                        'phone' => $request->billing_phone_number,
+                        'address' => [
+                            'line1' => $request->billing_address,
+                            'line2' => $request->billing_second_address ?? '',
+                            'city' => $request->billing_city,
+                            'state' => $request->billing_state,
+                            'country' => $request->billing_country,
+                            'postal_code' => $request->billing_zip_postal_code,
+                        ],
+                    ]);
+
+                    // Create Invoice with Payment Link
+                    $invoice = Invoice::create([
+                        'customer' => $customer->id,
+                        'collection_method' => 'send_invoice',
+                        'days_until_due' => 30,
+                        'auto_advance' => true,
+                        'description' => 'Order #' . $request->order_id . ' (Partial Benefit Payment)',
+                    ]);
+
+                    // Add invoice items
+                    InvoiceItem::create([
+                        'customer' => $customer->id,
+                        'amount' => $remainingAmount * 100, // Amount in cents
+                        'currency' => 'usd',
+                        'description' => 'Remaining Order Payment',
+                        'invoice' => $invoice->id,
+                    ]);
+
+                    // Finalize and send the invoice
+                    $finalizedInvoice = Invoice::retrieve($invoice->id);
+                    $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
+                    $sentInvoice = $finalizedInvoice->sendInvoice();
+
+                    $order->stripe_invoice_id = $sentInvoice->id;
+                    $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
+                    $order->save();
+                }
+            } catch (\Exception $e) {
+                Log::error('Payment Error: ' . $e->getMessage());
+                return response()->json(['error' => 'Failed to process payment.'], 500);
+            }
+        } else {
+            try {
+                $employee = Employee::findOrFail($employeeId);
+                $deductionAmount = $request->net_total;
+
+                if ($employee->benefit_amount < $deductionAmount) {
+                    $deductionAmount = $employee->benefit_amount;
+                }
+
+                $employee->benefit_amount -= $deductionAmount;
+                $employee->save();
+                $this->deleteEmployeeOrderDetails($employeeId);
+
+                Transaction::create([
+                    'employee_id' => $employeeId,
+                    'transaction_type' => 'debit',
+                    'amount' => $deductionAmount,
+                    'balance' => $employee->benefit_amount,
+                    'description' => 'Order payment from benefit',
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Benefit Payment Error: ' . $e->getMessage());
+                return response()->json(['error' => 'Failed to process benefit payment.'], 500);
+            }
+        }
+
+
 
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
         $email = $user->email;
@@ -424,7 +524,15 @@ class OrderController extends Controller
         ]));
 
         // Set order status based on payment method
-        $order->order_status = $request->payment_method === 'pay_later' ? 'pending_payment' : 'pending';
+        if ($request->payment_method === 'pay_later') {
+            $order->order_status = 'pending_payment';
+        } else if ($order->payment_method === 'Benefit Amount + Pay Later') {
+
+            $order->order_status = 'pending_payment';
+        } else {
+            $order->order_status = 'pending';
+        }
+
         $order->prescription_id = $latestPrescription->id;
 
         // Generate custom sequential confirmation number starting from 10001
@@ -435,9 +543,9 @@ class OrderController extends Controller
         if ($lastOrder) {
             $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
         } else {
-            $nextConfirmationNumber = 100001;
+            $nextConfirmationNumber = 100021;
         }
-        
+
         $order->order_confirmation_number = $nextConfirmationNumber;
 
         // Save order
@@ -484,6 +592,8 @@ class OrderController extends Controller
 
         $billing->order_id = $order->id;
         $billing->save();
+
+
         if ($request->payment_method === 'pay_later') {
             try {
                 Stripe::setApiKey(config('services.stripe.secret'));
@@ -494,7 +604,7 @@ class OrderController extends Controller
                     throw new \Exception("Invoice amount must be greater than $0.00");
                 }
 
-                // Step 1: Create Stripe Customer
+                // Create Stripe Customer
                 $customer = Customer::create([
                     'email' => $request->billing_email,
                     'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
@@ -509,17 +619,17 @@ class OrderController extends Controller
                     ],
                 ]);
 
-                // Step 2: Create Invoice with Payment Link
-                $invoice = \Stripe\Invoice::create([
+                // Create Invoice with Payment Link
+                $invoice = Invoice::create([
                     'customer' => $customer->id,
                     'collection_method' => 'send_invoice',
                     'days_until_due' => 30,
-                    'auto_advance' => true, // Automatically finalize this invoice
+                    'auto_advance' => true,
                     'description' => 'Order #' . $request->order_id,
                 ]);
 
                 // Add invoice items
-                \Stripe\InvoiceItem::create([
+                InvoiceItem::create([
                     'customer' => $customer->id,
                     'amount' => $remainingAmount * 100, // Amount in cents
                     'currency' => 'usd',
@@ -528,7 +638,7 @@ class OrderController extends Controller
                 ]);
 
                 // Finalize and send the invoice
-                $finalizedInvoice = \Stripe\Invoice::retrieve($invoice->id);
+                $finalizedInvoice = Invoice::retrieve($invoice->id);
                 $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
                 $sentInvoice = $finalizedInvoice->sendInvoice();
 
@@ -539,26 +649,111 @@ class OrderController extends Controller
                 Log::error('Stripe Invoice Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
             }
-        } else {
-            // Employee benefit deduction for non-pay_later methods
-            $employee = Employee::findOrFail($employeeId);
-            $deductionAmount = $request->net_total;
-
-            if ($employee->benefit_amount < $deductionAmount) {
-                $deductionAmount = $employee->benefit_amount;
-            }
-            $employee->benefit_amount -= $deductionAmount;
-            $employee->save();
-            $this->deleteEmployeeOrderDetails($employeeId);
-
-            Transaction::create([
-                'employee_id' => $employeeId,
-                'transaction_type' => 'debit',
-                'amount' => $request->net_total ?? '',
-                'balance' => $employee->benefit_amount ?? '',
-                'description' => 'order',
-            ]);
         }
+        // Case 2: Benefit + Credit
+        elseif ($request->payment_method === 'Benefit Amount + Pay Later') {
+            try {
+                $employee = Employee::findOrFail($employeeId);
+                $remainingAmount = $request->net_total;
+                $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+
+                // Deduct from employee benefit
+                if ($deductionAmount > 0) {
+                    $employee->benefit_amount -= $deductionAmount;
+                    $employee->save();
+
+                    Transaction::create([
+                        'employee_id' => $employeeId,
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $employee->benefit_amount,
+                        'description' => 'Order payment from benefit',
+                    ]);
+
+                    $this->deleteEmployeeOrderDetails($employeeId);
+                    $remainingAmount -= $deductionAmount;
+                }
+
+                // Process remaining amount via Stripe if any
+                if ($remainingAmount > 0) {
+                    Stripe::setApiKey(config('services.stripe.secret'));
+
+                    if ($remainingAmount <= 0) {
+                        throw new \Exception("Invoice amount must be greater than $0.00");
+                    }
+
+                    // Create Stripe Customer
+                    $customer = Customer::create([
+                        'email' => $request->billing_email,
+                        'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
+                        'phone' => $request->billing_phone_number,
+                        'address' => [
+                            'line1' => $request->billing_address,
+                            'line2' => $request->billing_second_address ?? '',
+                            'city' => $request->billing_city,
+                            'state' => $request->billing_state,
+                            'country' => $request->billing_country,
+                            'postal_code' => $request->billing_zip_postal_code,
+                        ],
+                    ]);
+
+                    // Create Invoice with Payment Link
+                    $invoice = Invoice::create([
+                        'customer' => $customer->id,
+                        'collection_method' => 'send_invoice',
+                        'days_until_due' => 30,
+                        'auto_advance' => true,
+                        'description' => 'Order #' . $request->order_id . ' (Partial Benefit Payment)',
+                    ]);
+
+                    // Add invoice items
+                    InvoiceItem::create([
+                        'customer' => $customer->id,
+                        'amount' => $remainingAmount * 100, // Amount in cents
+                        'currency' => 'usd',
+                        'description' => 'Remaining Order Payment',
+                        'invoice' => $invoice->id,
+                    ]);
+
+                    // Finalize and send the invoice
+                    $finalizedInvoice = Invoice::retrieve($invoice->id);
+                    $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
+                    $sentInvoice = $finalizedInvoice->sendInvoice();
+
+                    $order->stripe_invoice_id = $sentInvoice->id;
+                    $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
+                    $order->save();
+                }
+            } catch (\Exception $e) {
+                Log::error('Payment Error: ' . $e->getMessage());
+                return response()->json(['error' => 'Failed to process payment.'], 500);
+            }
+        } else {
+            try {
+                $employee = Employee::findOrFail($employeeId);
+                $deductionAmount = $request->net_total;
+
+                if ($employee->benefit_amount < $deductionAmount) {
+                    $deductionAmount = $employee->benefit_amount;
+                }
+
+                $employee->benefit_amount -= $deductionAmount;
+                $employee->save();
+                $this->deleteEmployeeOrderDetails($employeeId);
+
+                Transaction::create([
+                    'employee_id' => $employeeId,
+                    'transaction_type' => 'debit',
+                    'amount' => $deductionAmount,
+                    'balance' => $employee->benefit_amount,
+                    'description' => 'Order payment from benefit',
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Benefit Payment Error: ' . $e->getMessage());
+                return response()->json(['error' => 'Failed to process benefit payment.'], 500);
+            }
+        }
+
 
 
         $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
@@ -584,6 +779,17 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
+
+    public function companylist(Request $request)
+    {
+
+        $companies = Company::select('id', 'company_Information')->get();
+
+        return $this->successResponse(['model' => 'company'], 'Companies Details successfully', [
+            'companies' => $companies,
+        ]);
+    }
+
     public function deleteEmployeeOrderDetails($employeeId)
     {
 
@@ -644,8 +850,6 @@ class OrderController extends Controller
                 'lens_tint:id,title',
                 'lens_protection:id,title',
                 'frame_size:frame_size_id,frame_size_name',
-
-
                 'product:product_id,product_name,sku,manufacturer_name', // add manufacturer_name if needed
                 'product.manufacturer:manufacturer_id,manufacturer_name', // nested relation to get manufacturer
                 'variant',
@@ -818,7 +1022,7 @@ class OrderController extends Controller
             // Prescription fields
             'frame_type' => 'nullable|string|max:255',
             'frame_prescription' => 'nullable|string|max:255',
-            'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'prescription_image' => 'nullable|image|max:2048',
             'od_left_sphere' => 'nullable|string|max:10',
             'od_left_cylinders' => 'nullable|string|max:10',
             'od_left_axis' => 'nullable|string|max:10',
@@ -830,7 +1034,7 @@ class OrderController extends Controller
             'od_right_nv_add' => 'nullable|string|max:10',
             'od_right_2_pds' => 'nullable|string|max:10',
             'pupil_distance' => 'nullable|string',
-            'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'frame_picture' => 'nullable|image|max:2048',
             'pupil_distance_online' => 'nullable|string',
             'od_left_2_pds_online' => 'nullable|string|max:10',
             'od_right_2_pds_online' => 'nullable|string|max:10',
@@ -1063,7 +1267,7 @@ class OrderController extends Controller
                 'od_right_nv_add' => 'nullable|string',
                 'od_right_2_pds' => 'nullable|string',
                 'lense_use' => 'nullable|string',
-                'frame_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'frame_picture' => 'nullable|image|max:2048',
                 'product_details' => 'nullable|string',
                 'lense_material' => 'nullable|string',
                 'scratch_coating' => 'nullable|string',

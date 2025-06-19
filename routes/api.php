@@ -34,8 +34,9 @@ Route::post('/create-checkout-session', [StripeController::class, 'createCheckou
 Route::post('/check-payment-status', [StripeController::class, 'checkPaymentStatus']);
 
 Route::get('/pay-later-orders', [OrderController::class, 'getPayLaterOrders']);
+Route::get('get/company/list', [OrderController::class, 'companylist']);
 
- 
+
 
 
 
@@ -53,7 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('logout', [AuthController::class, 'logout'])->name('logout.current');
     Route::post('logout/all', [AuthController::class, 'logoutAll'])->name('logout.all');
-   Route::post('check-validation', [AuthController::class, 'validateToken']);
+    Route::post('check-validation', [AuthController::class, 'validateToken']);
 
     Route::middleware('role:owner')->group(function () {
 
@@ -129,7 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
         Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
         Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);
-
+        
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
         Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
         Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);

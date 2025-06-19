@@ -25,25 +25,25 @@ class ImportEmployees implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
+
        
         foreach ($rows as $index => $row) {
             try {
-
                 $phone = $row['phone'] ?? '';
+                $phone = trim($phone);
 
-                $isNA = strtoupper(trim($phone)) === 'N/A' || !preg_match('/^\d+$/', $phone);
+                // Accept only digits or +digits, else set to 'N/A'
+                if (preg_match('/^\+?\(?\d{3,}\)?([-]?\d+)*$/', $phone)) {
+                    // Valid phone number format
+                } else {
+                    $phone = 'N/A';
+                }
 
                 $validationRules = [
                     'username' => 'required',
                     'email' => 'required|email|unique:users,email',
                     'designation' => 'required',
                 ];
-
-                if (!$isNA) {
-                    $validationRules['phone'] = 'required';
-                } else {
-                    $validationRules['phone'] = 'required';
-                }
 
                 $validator = Validator::make($row->toArray(), $validationRules);
 
@@ -52,19 +52,12 @@ class ImportEmployees implements ToCollection, WithHeadingRow
                         if (str_contains($error, 'email')) {
                             $this->errors[] = "Row " . ($index + 2) . ": The email '" . $row['email'] . "' has already been taken.";
                         } elseif (str_contains($error, 'phone')) {
-                            $this->errors[] = "Row " . ($index + 2) . ": The phone number '" . $row['phone'] . "' has already been taken.";
+                            $this->errors[] = "Row " . ($index + 2) . ": The phone number '" . $row['phone'] . "' is invalid.";
                         } else {
                             $this->errors[] = "Row " . ($index + 2) . ": " . $error;
                         }
                     }
                     continue;
-                }
-
-                
-                
-
-                if ($isNA) {
-                    $phone = 'N/A';
                 }
 
                 DB::beginTransaction();

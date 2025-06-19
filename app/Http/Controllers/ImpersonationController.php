@@ -109,7 +109,9 @@ class ImpersonationController extends Controller
             'name' => optional($user->Companydata)->company_name,
             'email' => $user->email,
             'phone_no' => optional($user->Companydata)->phone,
+            'benefits' => optional($user->Companydata)->benefits,
             'address' => optional($user->Companydata)->address,
+
         ];
 
         return $this->successResponse(array('model' => 'users'), 'Impersonated as Employe successfully', [

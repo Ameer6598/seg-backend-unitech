@@ -28,7 +28,7 @@ class UserObserver
         ])->post($baseUrl . '/contacts/', [
             'email' => $user->email,
             'firstName' => $user->name,
-            'phone' => $user->Employedata->phone ?? null,
+            'phone' => null,
             'role'=>$user->role,
             'customField' => [
                 'verification_link' => $verificationLink

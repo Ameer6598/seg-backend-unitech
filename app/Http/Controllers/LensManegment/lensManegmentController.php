@@ -902,48 +902,6 @@ class lensManegmentController extends Controller
     }
 
 
-    // public function getall()
-    // {
-
-    //     $CompanyId = auth('sanctum')->user()->company_id;
-    //     $baseUrl = env('LOGO_URL');
-
-    //     $materials = LensMaterial::all()->map(function ($item) use ($baseUrl) {
-    //         $item->image_url = $baseUrl . $item->image_url;
-    //         return $item;
-    //     });
-
-    //     $coatings = ScracthCoating::all()->map(function ($item) use ($baseUrl) {
-    //         $item->image_url = $baseUrl . $item->image_url;
-    //         return $item;
-    //     });
-
-    //     $tints = LensTint::all()->map(function ($item) use ($baseUrl) {
-    //         $item->image_url = $baseUrl . $item->image_url;
-    //         return $item;
-    //     });
-
-    //     $lensProtections = LensProtection::all()->map(function ($item) use ($baseUrl) {
-    //         $item->image_url = $baseUrl . $item->image_url;
-    //         return $item;
-    //     });
-
-    //     $blueLightProtections = BlueLightProtection::all()->map(function ($item) use ($baseUrl) {
-    //         $item->image_url = $baseUrl . $item->image_url;
-    //         return $item;
-    //     });
-
-
-
-
-    //     return response()->json([
-    //         'materials' => $materials,
-    //         'coatings' => $coatings,
-    //         'tints' => $tints,
-    //         'lens_protections' => $lensProtections,
-    //         'blue_light_protections' => $blueLightProtections,
-    //     ]);
-    // }
 
     public function getall()
     {
