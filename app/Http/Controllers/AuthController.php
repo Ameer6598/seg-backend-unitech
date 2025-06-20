@@ -50,7 +50,7 @@ class AuthController extends Controller
         if ($user->role === 'employee') {
 
 
-         $latestPrescription = PrecriptionDetails::where('employee_id', $user->employee_id)->latest()->first();
+            $latestPrescription = PrecriptionDetails::where('employee_id', $user->employee_id)->latest()->first();
 
             $filteredUserData = [
                 'name' => $user->name,
@@ -58,7 +58,7 @@ class AuthController extends Controller
                 'id' => $user->employee_id,
                 'phone_no' => optional($user->Employedata)->phone,
                 'benefits' => optional($user->Companydata)->benefits,
-                'last_prescription'=> $latestPrescription,
+                'last_prescription' => $latestPrescription,
 
             ];
         } elseif ($user->role === 'company') {
@@ -182,7 +182,15 @@ class AuthController extends Controller
 
     public function validateToken(Request $request)
     {
-        
+
         return $this->successResponse([], 'Token is valid');
+    }
+
+
+    public function loginerror(Request $request)
+    {
+        return response()->json([
+            'message' => 'unauthorized',
+        ], 401);
     }
 }

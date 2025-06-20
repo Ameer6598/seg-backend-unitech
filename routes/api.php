@@ -10,9 +10,11 @@ use App\Http\Controllers\StripeController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\LenseTypeController;
 use App\Http\Controllers\TempOrderController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\LensManegment\AssignLenstint;
+use App\Http\Controllers\LensTypeSubcategoriesController;
 use App\Http\Controllers\LensManegment\AssignLensMaterial;
 use App\Http\Controllers\LensManegment\AssignLensProtection;
 use App\Http\Controllers\LensManegment\AssignScratchCoating;
@@ -24,7 +26,9 @@ Route::get('/users', function () {
 });
 
 
-Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+
+Route::get('/loginerorr', [AuthController::class, 'loginerror'])->name('login');
 
 Route::post('set/newpassword', [AuthController::class, 'set']);
 
@@ -56,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout/all', [AuthController::class, 'logoutAll'])->name('logout.all');
     Route::post('check-validation', [AuthController::class, 'validateToken']);
 
+
     Route::middleware('role:owner')->group(function () {
 
 
@@ -78,6 +83,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('assign-lens_tint-to-company', [AssignLenstint::class, 'assignLensTintToCompany']);
         Route::post('assign-lens_protection-to-company', [AssignLensProtection::class, 'assignLensProtectionToCompany']);
         Route::post('assign-blue_light_protection-to-company', [AssignBlueLightProtection::class, 'assignBlueLightProtectionToCompany']);
+
+        //Lens Types Categories curd
+        Route::post('create-lense-type-categories', [LenseTypeController::class, 'create']);
+        Route::get('lense-type-categories', [LenseTypeController::class, 'get']);
+        Route::post('update-lense-type-categories/{id}', [LenseTypeController::class, 'update']);
+        Route::delete('lense-type-categories/{id}', [LenseTypeController::class, 'delete']);
+
+
+        Route::post('create-lense-type-sub-categories', [LensTypeSubcategoriesController::class, 'create']);
+        Route::get('lense-type-sub-categories', [LenseTypeController::class, 'get']);
+        Route::post('update-lense-type-sub-categories/{id}', [LensTypeSubcategoriesController::class, 'update']);
+        Route::delete('lense-type-sub-categories/{id}', [LensTypeSubcategoriesController::class, 'delete']);
 
 
 
@@ -130,7 +147,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
         Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
         Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);
-        
+
         Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
         Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
         Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);
