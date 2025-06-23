@@ -41,6 +41,7 @@ Route::get('/pay-later-orders', [OrderController::class, 'getPayLaterOrders']);
 Route::get('get/company/list', [OrderController::class, 'companylist']);
 
 
+    Route::get('company/assigned-lens-subcategories', [LensTypeSubcategoriesController::class, 'getAssignedLensTypeSubcategoriesForCompany']);
 
 
 
@@ -83,6 +84,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('assign-lens_tint-to-company', [AssignLenstint::class, 'assignLensTintToCompany']);
         Route::post('assign-lens_protection-to-company', [AssignLensProtection::class, 'assignLensProtectionToCompany']);
         Route::post('assign-blue_light_protection-to-company', [AssignBlueLightProtection::class, 'assignBlueLightProtectionToCompany']);
+        Route::post('assign-company_lens_type_subcategories-to-company', [LensTypeSubcategoriesController::class, 'assignLensTypeSubcategoriesToCompanies']);
+
+
 
         //Lens Types Categories curd
         Route::post('create-lense-type-categories', [LenseTypeController::class, 'create']);
@@ -92,7 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
         Route::post('create-lense-type-sub-categories', [LensTypeSubcategoriesController::class, 'create']);
-        Route::get('lense-type-sub-categories', [LenseTypeController::class, 'get']);
+        Route::get('lense-type-sub-categories', [LensTypeSubcategoriesController::class, 'get']);
         Route::post('update-lense-type-sub-categories/{id}', [LensTypeSubcategoriesController::class, 'update']);
         Route::delete('lense-type-sub-categories/{id}', [LensTypeSubcategoriesController::class, 'delete']);
 
@@ -143,6 +147,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:employee')->group(function () {
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
         Route::get('get-product-manufactures', [ProductController::class, 'getManufacturers']);
+    
+
 
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
         Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
@@ -251,4 +257,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('update-blue-light-protection/{id}', [lensManegmentController::class, 'updateBlueLightProtection']);
         Route::delete('delete/blue-light-protection/{id}', [lensManegmentController::class, 'deleteBlueLightProtection']); // single
     });
+
+
+
 });
