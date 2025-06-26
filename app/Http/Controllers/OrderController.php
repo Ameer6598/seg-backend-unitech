@@ -68,6 +68,9 @@ class OrderController extends Controller
             'shipping_phone_number' => 'required|string|max:20',
             'shipping_additional_information' => 'nullable|string|max:255',
             'payment_method' => 'required|string|max:100',
+            'shipping_status' => 'required|string|max:100',
+
+
             'product_id' => 'required|integer',
             'variant_id' => 'required|integer',
             'frame_size' => 'required',
@@ -178,6 +181,7 @@ class OrderController extends Controller
             'lens_tint',
             'lens_protection',
             'payment_method',
+            'shipping_status',
             'product_id',
             'product_quantity',
             'net_total',
@@ -187,16 +191,19 @@ class OrderController extends Controller
             'variant_id'
         ]));
 
-        if ($request->payment_method === 'pay_later') {
-            $order->order_status = 'pending_payment';
-        } else if ($order->payment_method === 'Benefit Amount + Pay Later') {
-
-            $order->order_status = 'pending_payment';
-        } else {
-            $order->order_status = 'pending';
+        if ($request->payment_method === 'Online Payment') {
+            $order->payment_status = 'Unpaid';
+        } else if ($order->payment_method === 'Benefit Amount + Online Payment') {
+            $order->payment_status = 'Unpaid';
+        } else if ($order->payment_method === 'Benefit Amount + Credit Card') {
+            $order->payment_status = 'Paid';
+        } else if ($order->payment_method === 'Credit Card') {
+            $order->payment_status = 'Paid';
+        } else if ($order->payment_method === 'Benefit Amount') {
+            $order->payment_status = 'Paid';
         }
 
-
+        $order->order_status = 'Pending';
 
         $order->prescription_id = $pres->id;
 
@@ -252,7 +259,7 @@ class OrderController extends Controller
         $billing->order_id = $order->id;
         $billing->save();
 
-        if ($request->payment_method === 'pay_later') {
+        if ($request->payment_method === 'Online Payment') {
             try {
                 Stripe::setApiKey(config('services.stripe.secret'));
 
@@ -309,7 +316,7 @@ class OrderController extends Controller
             }
         }
         // Case 2: Benefit + Credit
-        elseif ($request->payment_method === 'benefit_pay_later') {
+        elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
             try {
                 $employee = Employee::findOrFail($employeeId);
                 $remainingAmount = $request->net_total;
@@ -430,14 +437,18 @@ class OrderController extends Controller
     public function existingPresOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'blue_light_protection' => 'required|string',
-            'order_type' => 'required|string|max:255',
-            'lense_material' => 'required|string|max:255',
-            'scratch_coating' => 'required',
-            'lens_tint' => 'required|string|max:255',
-            'lens_protection' => 'required|string|max:255',
+            'blue_light_protection' => 'nullable|string',
+            'order_type' => 'nullable|string|max:255',
+            'lense_material' => 'nullable|string|max:255',
+            'scratch_coating' => 'nullable',
+            'lens_tint' => 'nullable|string|max:255',
+            'lens_protection' => 'nullable|string|max:255',
+
 
             'payment_method' => 'required|string|max:100',
+            'shipping_status' => 'required|string|max:100',
+
+
             'product_id' => 'required|integer',
             'variant_id' => 'required|integer ',
             'frame_size' => 'required',
@@ -513,25 +524,29 @@ class OrderController extends Controller
             'lens_tint',
             'lens_protection',
             'payment_method',
+            'shipping_status',
             'product_id',
             'product_quantity',
             'net_total',
             'paid_amount_via_card',
             'paid_amount_via_benefit',
-
             'frame_size',
             'variant_id'
         ]));
 
-        // Set order status based on payment method
-        if ($request->payment_method === 'pay_later') {
-            $order->order_status = 'pending_payment';
-        } else if ($order->payment_method === 'Benefit Amount + Pay Later') {
-
-            $order->order_status = 'pending_payment';
-        } else {
-            $order->order_status = 'pending';
+        if ($request->payment_method === 'Online Payment') {
+            $order->payment_status = 'Unpaid';
+        } else if ($order->payment_method === 'Benefit Amount + Online Payment') {
+            $order->payment_status = 'Unpaid';
+        } else if ($order->payment_method === 'Benefit Amount + Credit Card') {
+            $order->payment_status = 'Paid';
+        } else if ($order->payment_method === 'Credit Card') {
+            $order->payment_status = 'Paid';
+        } else if ($order->payment_method === 'Benefit Amount') {
+            $order->payment_status = 'Paid';
         }
+
+        $order->order_status = 'Pending';
 
         $order->prescription_id = $latestPrescription->id;
 
@@ -594,7 +609,7 @@ class OrderController extends Controller
         $billing->save();
 
 
-        if ($request->payment_method === 'pay_later') {
+        if ($request->payment_method === 'Online Payment') {
             try {
                 Stripe::setApiKey(config('services.stripe.secret'));
 
@@ -651,7 +666,7 @@ class OrderController extends Controller
             }
         }
         // Case 2: Benefit + Credit
-        elseif ($request->payment_method === 'Benefit Amount + Pay Later') {
+        elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
             try {
                 $employee = Employee::findOrFail($employeeId);
                 $remainingAmount = $request->net_total;
@@ -996,8 +1011,8 @@ class OrderController extends Controller
             'billing_second_address' => 'nullable|string|max:1000',
             'billing_zip_postal_code' => 'nullable|string|max:20',
             'billing_phone_number' => 'nullable|string|max:20',
-            'order_status' => 'nullable|in:Pending,Confirmed,Shipped,Delivered',
-
+            'order_status' => 'nullable|',
+            'shipping_status' => 'nullable|string|max:100',
             // Shipping details
             'shipping_first_name' => 'nullable|string|max:255',
             'shipping_last_name' => 'nullable|string|max:255',
@@ -1108,6 +1123,7 @@ class OrderController extends Controller
                 'frame_size',
                 'color',
                 'order_status',
+                'shipping_status'
             ]) as $key => $value
         ) {
             $order->$key = $value;
@@ -1368,11 +1384,10 @@ class OrderController extends Controller
         try {
             // Set Stripe API key
             Stripe::setApiKey(config('services.stripe.secret'));
-
-            // Get all orders with pay_later payment method
-            $orders = Order::where('payment_method', 'pay_later')
+            $orders = Order::whereIn('payment_method', ['Online Payment', 'Benefit Amount + Online Paymen'])
                 ->whereNotNull('stripe_invoice_id')
                 ->get();
+
 
             $paidOrders = [];
             $pendingOrders = [];
