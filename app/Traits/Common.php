@@ -4,7 +4,7 @@ namespace App\Traits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-trait common
+trait Common
 {
 
     public function getProductDetails($productId)
