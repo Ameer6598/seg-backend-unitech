@@ -61,7 +61,7 @@ class CompanyController extends Controller
                 'phone' => $request->phone ?? '',
                 'company_logo' => $logoPath,
                 'company_Information' => $request->company_Information,
-                     'benefits' => $request->benefits,
+                'benefits' => $request->benefits,
             ]);
 
             $user = User::create([
@@ -206,25 +206,77 @@ class CompanyController extends Controller
         }
     }
 
+    // public function getAll()
+    // {
+    //     try {
+    //         $companies = DB::table('companies')
+    //             ->join('users', 'companies.id', '=', 'users.company_id')->where('role', 'company')
+    //             ->select('companies.*', 'users.name as username', 'users.email', 'users.status')
+    //             ->get();
+    //         if ($companies->isEmpty()) {
+    //             return $this->errorResponse(['model' => 'company'], 'No companies found', [], 404);
+    //         }
+
+    //         return $this->successResponse(['model' => 'company'], 'Companies retrieved successfully', [
+    //             'companies' => $companies,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
+    //     }
+    // }
+
     public function getAll()
     {
         try {
-            $companies = DB::table('companies')
-                ->join('users', 'companies.id', '=', 'users.company_id')->where('role', 'company')
-                ->select('companies.*', 'users.name as username', 'users.email', 'users.status')
-                ->get();
+            $companies = Company::with([
+                'users' => function ($query) {
+                    $query->select('id', 'company_id', 'name as username', 'email', 'status');
+                },
+                'products' // eager load products with limited fields
+            ])->get();
+
             if ($companies->isEmpty()) {
                 return $this->errorResponse(['model' => 'company'], 'No companies found', [], 404);
             }
 
+            $formattedCompanies = $companies->map(function ($company) {
+                return [
+                    'id' => $company->id,
+                    'company_name' => $company->company_name,
+                    'address' => $company->address,
+                    'phone' => $company->phone,
+                    'company_logo' => $company->company_logo,
+                    'company_Information' => $company->company_Information,
+                    'benefits' => $company->benefits,
+                    'created_at' => $company->created_at->format('Y-m-d H:i:s'),
+                    'updated_at' => $company->updated_at->format('Y-m-d H:i:s'),
+                    'username' => $company->users->first()->username ?? null,
+                    'email' => $company->users->first()->email ?? null,
+                    'status' => $company->users->first()->status ?? null,
+                    'products' => $company->products->map(function ($product) {
+                        return [
+                            'product_id' => $product->product_id,
+                            'product_name' => $product->product_name,
+                        ];
+                    }),
+                ];
+            });
+
             return $this->successResponse(['model' => 'company'], 'Companies retrieved successfully', [
-                'companies' => $companies,
+                'companies' => $formattedCompanies,
             ]);
+
+            // return response()->json([
+            //     'status' => 'Success',
+            //     'meta' => ['model' => 'company'],
+            //     'message' => 'Companies retrieved successfully',
+            //     'data' => ['companies' => $formattedCompanies],
+            //     'code' => 200,
+            // ], 200);
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
         }
     }
-
 
 
     public function companyPassword(Request $request)

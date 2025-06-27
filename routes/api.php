@@ -41,7 +41,7 @@ Route::get('/pay-later-orders', [OrderController::class, 'getPayLaterOrders']);
 Route::get('get/company/list', [OrderController::class, 'companylist']);
 
 
-    Route::get('company/assigned-lens-subcategories', [LensTypeSubcategoriesController::class, 'getAssignedLensTypeSubcategoriesForCompany']);
+Route::get('company/assigned-lens-subcategories', [LensTypeSubcategoriesController::class, 'getAssignedLensTypeSubcategoriesForCompany']);
 
 
 
@@ -147,7 +147,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:employee')->group(function () {
         Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
         Route::get('get-product-manufactures', [ProductController::class, 'getManufacturers']);
-    
+
 
 
         // Route::post('create-order', [OrderController::class, 'storeOrder']);
@@ -257,7 +257,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('update-blue-light-protection/{id}', [lensManegmentController::class, 'updateBlueLightProtection']);
         Route::delete('delete/blue-light-protection/{id}', [lensManegmentController::class, 'deleteBlueLightProtection']); // single
     });
-
-
-
 });
