@@ -71,6 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('update-owner-details', [AdminController::class, 'updateOwnerDetails']);
         Route::prefix('company')->group(function () {
             Route::get('companies', [CompanyController::class, 'getAll']);
+
+
+
             Route::post('create', [CompanyController::class, 'create']); // Keep "create" if you want
             Route::post('{companyId}', [CompanyController::class, 'update']);
             Route::delete('{companyId}', [CompanyController::class, 'delete']);
@@ -123,6 +126,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('employees', [EmployeeController::class, 'getAll']);
     });
     Route::middleware('role:company')->group(function () {
+
+        Route::get('getMyCompanyDetails', [CompanyController::class, 'getMyCompanyDetails']);
         Route::prefix('employee/')->group(function () {
             Route::post('import', [EmployeeController::class, 'import']);
             Route::get('export', [EmployeeController::class, 'downloadSample']);

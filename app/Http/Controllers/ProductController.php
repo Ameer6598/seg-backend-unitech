@@ -561,6 +561,8 @@ class ProductController extends Controller
     }
 
 
+    
+
 
     public function getemployeeProducts(Request $request)
     {

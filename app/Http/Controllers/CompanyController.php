@@ -304,6 +304,96 @@ class CompanyController extends Controller
         }
     }
 
+    public function getMyCompanyDetails()
+    {
+        try {
+          
+            $user = auth('sanctum')->user();
+
+            if (!$user) {
+                return $this->errorResponse(['model' => 'user'], 'Unauthorized access', [], 401);
+            }
+
+            $company = Company::with([
+                'users' => function ($query) {
+                    $query->select('id', 'company_id', 'name as username', 'email', 'status');
+                },
+               
+                'lensmaterial',
+                'scratchcoatings',
+                'lenstint',
+                'lensprotection',
+                'bluelightprotection',
+                'lenstypesubcategories'
+            ])->find($user->company_id);
+
+            if (!$company) {
+                return $this->errorResponse(['model' => 'company'], 'Company not found', [], 404);
+            }
+
+            $formattedCompany = [
+                'id' => $company->id,
+                'company_name' => $company->company_name,
+                'address' => $company->address,
+                'phone' => $company->phone,
+                'company_logo' => $company->company_logo,
+                'company_Information' => $company->company_Information,
+                'benefits' => $company->benefits,
+                'created_at' => $company->created_at->format('Y-m-d H:i:s'),
+                'updated_at' => $company->updated_at->format('Y-m-d H:i:s'),
+                'username' => $company->users->first()->username ?? null,
+                'email' => $company->users->first()->email ?? null,
+                'status' => $company->users->first()->status ?? null,
+
+                'lensmaterial' => $company->lensmaterial->map(function ($material) {
+                    return [
+                        'material_id' => $material->id,
+                        'material_title' => $material->title,
+                    ];
+                }),
+                'scratchcoatings' => $company->scratchcoatings->map(function ($coating) {
+                    return [
+                        'coating_id' => $coating->id,
+                        'coating_title' => $coating->title,
+                    ];
+                }),
+                'lenstints' => $company->lenstint->map(function ($lenstint) {
+                    return [
+                        'lenstint_id' => $lenstint->id,
+                        'lenstint_title' => $lenstint->title,
+                    ];
+                }),
+                'lensprotection' => $company->lensprotection->map(function ($lensprotection) {
+                    return [
+                        'lensprotection_id' => $lensprotection->id,
+                        'lensprotection_title' => $lensprotection->title,
+                    ];
+                }),
+                'bluelightprotection' => $company->bluelightprotection->map(function ($bluelightprotection) {
+                    return [
+                        'bluelightprotection_id' => $bluelightprotection->id,
+                        'bluelightprotection_title' => $bluelightprotection->title,
+                    ];
+                }),
+                'lenstypesubcategories' => $company->lenstypesubcategories->map(function ($lenstypesubcategories) {
+                    return [
+                        'lenstypesubcategories_id' => $lenstypesubcategories->id,
+                        'lenstypesubcategories_title' => $lenstypesubcategories->title,
+                    ];
+                }),
+
+              
+            ];
+
+            return $this->successResponse(['model' => 'company'], 'Company retrieved successfully', [
+                'company' => $formattedCompany,
+            ]);
+        } catch (\Exception $e) {
+            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
+        }
+    }
+
+
 
     public function companyPassword(Request $request)
     {
