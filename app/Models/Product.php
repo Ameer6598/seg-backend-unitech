@@ -72,7 +72,10 @@ class Product extends Model
      return $this->hasMany(ProductVariants::class,'product_id','product_id')->with('variant_images');
         
     }
-
+public function companyProducts()
+    {
+        return $this->hasMany(CompanyProduct::class);
+    }
 
 
 }
