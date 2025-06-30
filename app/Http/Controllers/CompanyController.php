@@ -206,24 +206,6 @@ class CompanyController extends Controller
         }
     }
 
-    // public function getAll()
-    // {
-    //     try {
-    //         $companies = DB::table('companies')
-    //             ->join('users', 'companies.id', '=', 'users.company_id')->where('role', 'company')
-    //             ->select('companies.*', 'users.name as username', 'users.email', 'users.status')
-    //             ->get();
-    //         if ($companies->isEmpty()) {
-    //             return $this->errorResponse(['model' => 'company'], 'No companies found', [], 404);
-    //         }
-
-    //         return $this->successResponse(['model' => 'company'], 'Companies retrieved successfully', [
-    //             'companies' => $companies,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
-    //     }
-    // }
 
     public function getAll()
     {
@@ -232,7 +214,13 @@ class CompanyController extends Controller
                 'users' => function ($query) {
                     $query->select('id', 'company_id', 'name as username', 'email', 'status');
                 },
-                'products' // eager load products with limited fields
+                'products',
+                'lensmaterial',
+                'scratchcoatings',
+                'lenstint',
+                'lensprotection',
+                'bluelightprotection',
+                'lenstypesubcategories'
             ])->get();
 
             if ($companies->isEmpty()) {
@@ -253,6 +241,44 @@ class CompanyController extends Controller
                     'username' => $company->users->first()->username ?? null,
                     'email' => $company->users->first()->email ?? null,
                     'status' => $company->users->first()->status ?? null,
+
+                    'lensmaterial' => $company->lensmaterial->map(function ($material) {
+                        return [
+                            'material_id' => $material->id,
+                            'material_title' => $material->title,
+                        ];
+                    }),
+                    'scratchcoatings' => $company->scratchcoatings->map(function ($coating) {
+                        return [
+                            'coating_id' => $coating->id,
+                            'coating_title' => $coating->title,
+                        ];
+                    }),
+                    'lenstints' => $company->lenstint->map(function ($lenstint) {
+                        return [
+                            'lenstint_id' => $lenstint->id,
+                            'lenstint_title' => $lenstint->title,
+                        ];
+                    }),
+                    'lensprotection' => $company->lensprotection->map(function ($lensprotection) {
+                        return [
+                            'lensprotection_id' => $lensprotection->id,
+                            'lensprotection_title' => $lensprotection->title,
+                        ];
+                    }),
+                    'bluelightprotection' => $company->bluelightprotection->map(function ($bluelightprotection) {
+                        return [
+                            'bluelightprotection_id' => $bluelightprotection->id,
+                            'bluelightprotection_title' => $bluelightprotection->title,
+                        ];
+                    }),
+                    'lenstypesubcategories' => $company->lenstypesubcategories->map(function ($lenstypesubcategories) {
+                        return [
+                            'lenstypesubcategories_id' => $lenstypesubcategories->id,
+                            'lenstypesubcategories_title' => $lenstypesubcategories->title,
+                        ];
+                    }),
+
                     'products' => $company->products->map(function ($product) {
                         return [
                             'product_id' => $product->product_id,
