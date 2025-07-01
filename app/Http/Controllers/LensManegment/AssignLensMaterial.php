@@ -58,6 +58,43 @@ class AssignLensMaterial extends Controller
         }
     }
 
+    public function unassignLensMaterialFromCompany(Request $request)
+{
+    try {
+        $request->validate([
+            'company_ids' => 'required|array',
+            'company_ids.*' => 'required|integer',
+            'lens_material_id' => 'required|array',
+            'lens_material_id.*' => 'required|integer',
+        ]);
+
+        DB::beginTransaction();
+
+        $companyIds = $request->company_ids;
+        $lensMaterialIds = $request->lens_material_id;
+
+        // Delete the specified mappings
+        CompanyLensMaterial::whereIn('company_id', $companyIds)
+            ->whereIn('lens_material_id', $lensMaterialIds)
+            ->delete();
+
+        DB::commit();
+
+        return $this->successResponse(
+            ['model' => 'company_lens_material'],
+            'Lens materials unassigned from companies successfully',
+            []
+        );
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->errorResponse(
+            ['model' => 'company_lens_material'],
+            $e->getMessage(),
+            [],
+            422
+        );
+    }
+}
 
 
 }

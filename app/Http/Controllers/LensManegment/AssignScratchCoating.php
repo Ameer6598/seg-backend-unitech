@@ -67,4 +67,41 @@ class AssignScratchCoating extends Controller
             );
         }
     }
+
+    public function unassignScratchCoatingFromCompany(Request $request)
+    {
+        try {
+            $request->validate([
+                'company_ids' => 'required|array',
+                'company_ids.*' => 'required|integer',
+                'scratch_coating_ids' => 'required|array',
+                'scratch_coating_ids.*' => 'required|integer',
+            ]);
+
+            DB::beginTransaction();
+
+            $companyIds = $request->company_ids;
+            $scratchCoatingIds = $request->scratch_coating_ids;
+
+            CompanyScratchCoatings::whereIn('company_id', $companyIds)
+                ->whereIn('scratch_coating_id', $scratchCoatingIds)
+                ->delete();
+
+            DB::commit();
+
+            return $this->successResponse(
+                ['model' => 'company_scratch_coating'],
+                'Scratch coatings unassigned from companies successfully',
+                []
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(
+                ['model' => 'company_scratch_coating'],
+                $e->getMessage(),
+                [],
+                422
+            );
+        }
+    }
 }

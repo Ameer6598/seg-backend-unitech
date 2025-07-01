@@ -143,16 +143,6 @@ class ProductController extends Controller
             }
 
 
-            // $companies = DB::table('companies')->select('id')->get();
-            // $mappings = $companies->map(function ($company) use ($product) {
-            //     return [
-            //         'product_id' => $product->product_id,
-            //         'company_id' => $company->id,
-            //         'created_at' => now(),
-            //     ];
-            // })->toArray();
-
-            // CompanyProduct::insert($mappings);
 
             DB::commit();
             return $this->successResponse(['model' => 'products'], 'Product created successfully', [

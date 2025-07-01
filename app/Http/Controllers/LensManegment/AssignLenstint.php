@@ -66,4 +66,44 @@ class AssignLenstint extends Controller
             );
         }
     }
+
+public function unassignLensTintFromCompany(Request $request)
+{
+    try {
+        $request->validate([
+            'company_ids' => 'required|array',
+            'company_ids.*' => 'required|integer',
+            'lens_tint_ids' => 'required|array',
+            'lens_tint_ids.*' => 'required|integer',
+        ]);
+
+        DB::beginTransaction();
+
+        $companyIds = $request->company_ids;
+        $lensTintIds = $request->lens_tint_ids;
+
+        // Delete the specified mappings
+        Companylenstint::whereIn('company_id', $companyIds)
+            ->whereIn('lens_tint_id', $lensTintIds)
+            ->delete();
+
+        DB::commit();
+
+        return $this->successResponse(
+            ['model' => 'company_lens_tint'],
+            'Lens tints unassigned from companies successfully',
+            []
+        );
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->errorResponse(
+            ['model' => 'company_lens_tint'],
+            $e->getMessage(),
+            [],
+            422
+        );
+    }
+}
+
+
 }

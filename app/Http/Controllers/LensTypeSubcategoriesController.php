@@ -271,68 +271,112 @@ class LensTypeSubcategoriesController extends Controller
     }
 
 
-public function getAssignedLensTypeSubcategoriesForCompany()
-{
-    try {
-        // $companyId = auth('sanctum')->user()->company_id;
+    public function unassignLensTypeSubcategoriesFromCompanies(Request $request)
+    {
+        try {
+            $request->validate([
+                'company_ids' => 'required|array',
+                'company_ids.*' => 'required|integer',
+                'sub_cate_ids' => 'required|array',
+                'sub_cate_ids.*' => 'required|integer',
+            ]);
 
-        $companyId =2;
+            DB::beginTransaction();
 
+            $companyIds = $request->company_ids;
+            $subCateIds = $request->sub_cate_ids;
 
-        $assignedSubcategories = CompanyLensTypeSubcategories::where('company_id', $companyId)->get();
-        $grouped = $assignedSubcategories->groupBy('category_id');
+            // Optional: Collect category IDs related to the sub_cate_ids
+            $categories = LensTypeSubcategories::whereIn('id', $subCateIds)
+                ->get(['id', 'category_id']);
 
-        $result = [];
+            foreach ($companyIds as $companyId) {
+                foreach ($categories as $subcategory) {
+                    CompanyLensTypeSubcategories::where([
+                        'company_id' => $companyId,
+                        'sub_cate_id' => $subcategory->id,
+                        'category_id' => $subcategory->category_id,
+                    ])->delete();
+                }
+            }
 
-        $mediaUrl = rtrim(env('MEDIA_URL'), '/') . '/';
+            DB::commit();
 
-        foreach ($grouped as $categoryId => $subMappings) {
-            $category = LensTypeCategories::find($categoryId);
-            if (!$category) continue;
-
-            $subCateIds = $subMappings->pluck('sub_cate_id')->toArray();
-            $subCategories = LensTypeSubcategories::whereIn('id', $subCateIds)->get();
-
-            // Add full image URLs to subcategories
-            $subCategoryFormatted = $subCategories->map(function ($sub) use ($mediaUrl) {
-                return [
-                    'id' => $sub->id,
-                    'category_id' => $sub->category_id,
-                    'title' => $sub->title,
-                    'description' => $sub->description,
-                    'light_image_url' => $mediaUrl . ltrim($sub->light_image_url, '/'),
-                    'dark_image_url' => $mediaUrl . ltrim($sub->dark_image_url, '/'),
-                    'created_at' => $sub->created_at,
-                    'updated_at' => $sub->updated_at,
-                ];
-            });
-
-            $result[] = [
-                'category_id' => $category->id,
-                'category_title' => $category->title ?? null,
-                'light_image_url' => $mediaUrl . ltrim($category->light_image_url, '/'),
-                'dark_image_url' => $mediaUrl . ltrim($category->dark_image_url, '/'),
-                'subcategories' => $subCategoryFormatted,
-            ];
+            return $this->successResponse(
+                ['model' => 'CompanyLensTypeSubcategories'],
+                'Lens type subcategories unassigned from companies successfully.',
+                []
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(
+                ['model' => 'CompanyLensTypeSubcategories'],
+                $e->getMessage(),
+                [],
+                422
+            );
         }
-
-        return $this->successResponse(
-            ['model' => 'LensTypeCategoriesWithAssignedSubcategories'],
-            'Company-wise assigned subcategories fetched successfully.',
-            $result
-        );
-    } catch (\Exception $e) {
-        return $this->errorResponse(
-            ['model' => 'LensTypeCategoriesWithAssignedSubcategories'],
-            $e->getMessage(),
-            [],
-            500
-        );
     }
-}
 
 
 
+    public function getAssignedLensTypeSubcategoriesForCompany()
+    {
+        try {
+            // $companyId = auth('sanctum')->user()->company_id;
 
-    
+            $companyId = 2;
+
+
+            $assignedSubcategories = CompanyLensTypeSubcategories::where('company_id', $companyId)->get();
+            $grouped = $assignedSubcategories->groupBy('category_id');
+
+            $result = [];
+
+            $mediaUrl = rtrim(env('MEDIA_URL'), '/') . '/';
+
+            foreach ($grouped as $categoryId => $subMappings) {
+                $category = LensTypeCategories::find($categoryId);
+                if (!$category) continue;
+
+                $subCateIds = $subMappings->pluck('sub_cate_id')->toArray();
+                $subCategories = LensTypeSubcategories::whereIn('id', $subCateIds)->get();
+
+                // Add full image URLs to subcategories
+                $subCategoryFormatted = $subCategories->map(function ($sub) use ($mediaUrl) {
+                    return [
+                        'id' => $sub->id,
+                        'category_id' => $sub->category_id,
+                        'title' => $sub->title,
+                        'description' => $sub->description,
+                        'light_image_url' => $mediaUrl . ltrim($sub->light_image_url, '/'),
+                        'dark_image_url' => $mediaUrl . ltrim($sub->dark_image_url, '/'),
+                        'created_at' => $sub->created_at,
+                        'updated_at' => $sub->updated_at,
+                    ];
+                });
+
+                $result[] = [
+                    'category_id' => $category->id,
+                    'category_title' => $category->title ?? null,
+                    'light_image_url' => $mediaUrl . ltrim($category->light_image_url, '/'),
+                    'dark_image_url' => $mediaUrl . ltrim($category->dark_image_url, '/'),
+                    'subcategories' => $subCategoryFormatted,
+                ];
+            }
+
+            return $this->successResponse(
+                ['model' => 'LensTypeCategoriesWithAssignedSubcategories'],
+                'Company-wise assigned subcategories fetched successfully.',
+                $result
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                ['model' => 'LensTypeCategoriesWithAssignedSubcategories'],
+                $e->getMessage(),
+                [],
+                500
+            );
+        }
+    }
 }

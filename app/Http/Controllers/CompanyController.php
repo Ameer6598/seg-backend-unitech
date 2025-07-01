@@ -307,7 +307,7 @@ class CompanyController extends Controller
     public function getMyCompanyDetails()
     {
         try {
-          
+
             $user = auth('sanctum')->user();
 
             if (!$user) {
@@ -318,7 +318,7 @@ class CompanyController extends Controller
                 'users' => function ($query) {
                     $query->select('id', 'company_id', 'name as username', 'email', 'status');
                 },
-               
+
                 'lensmaterial',
                 'scratchcoatings',
                 'lenstint',
@@ -382,7 +382,7 @@ class CompanyController extends Controller
                     ];
                 }),
 
-              
+
             ];
 
             return $this->successResponse(['model' => 'company'], 'Company retrieved successfully', [
@@ -527,6 +527,37 @@ class CompanyController extends Controller
 
             DB::commit();
             return $this->successResponse(['model' => 'company_product'], 'Products assigned to companies successfully', []);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'company_product'], $e->getMessage(), [], 422);
+        }
+    }
+
+    public function unassignProductFromCompany(Request $request)
+    {
+        try {
+            $request->validate([
+                'company_ids' => 'required|array',
+                'company_ids.*' => 'required|integer',
+                'productid' => 'required|array',
+                'productid.*' => 'required|integer',
+            ]);
+
+            DB::beginTransaction();
+
+            $companyIds = $request->company_ids;
+            $productIds = $request->productid;
+
+            foreach ($companyIds as $companyId) {
+                foreach ($productIds as $productId) {
+                    CompanyProduct::where('company_id', $companyId)
+                        ->where('product_id', $productId)
+                        ->delete();
+                }
+            }
+
+            DB::commit();
+            return $this->successResponse(['model' => 'company_product'], 'Products unassigned from companies successfully', []);
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(['model' => 'company_product'], $e->getMessage(), [], 422);

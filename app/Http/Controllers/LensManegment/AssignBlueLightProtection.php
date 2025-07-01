@@ -67,7 +67,41 @@ class AssignBlueLightProtection extends Controller
         }
     }
 
+    public function unassignBlueLightProtectionFromCompany(Request $request)
+    {
+        try {
+            $request->validate([
+                'company_ids' => 'required|array',
+                'company_ids.*' => 'required|integer',
+                'blue_light_protection_ids' => 'required|array',
+                'blue_light_protection_ids.*' => 'required|integer',
+            ]);
 
+            DB::beginTransaction();
 
-    
+            $companyIds = $request->company_ids;
+            $blueLightIds = $request->blue_light_protection_ids;
+
+            // Delete the specified mappings
+            CompanyBlueLightProtection::whereIn('company_id', $companyIds)
+                ->whereIn('blue_light_protection_id', $blueLightIds)
+                ->delete();
+
+            DB::commit();
+
+            return $this->successResponse(
+                ['model' => 'blue_light_protection_mapper'],
+                'Blue light protections unassigned from companies successfully',
+                []
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(
+                ['model' => 'blue_light_protection_mapper'],
+                $e->getMessage(),
+                [],
+                422
+            );
+        }
+    }
 }

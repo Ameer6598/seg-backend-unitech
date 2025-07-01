@@ -66,4 +66,45 @@ class AssignLensProtection extends Controller
             );
         }
     }
+
+    public function unassignLensProtectionFromCompany(Request $request)
+{
+    try {
+        $request->validate([
+            'company_ids' => 'required|array',
+            'company_ids.*' => 'required|integer',
+            'lens_protection_ids' => 'required|array',
+            'lens_protection_ids.*' => 'required|integer',
+        ]);
+
+        DB::beginTransaction();
+
+        $companyIds = $request->company_ids;
+        $lensProtectionIds = $request->lens_protection_ids;
+
+        // Delete the specified mappings
+        CompanyLensProtection::whereIn('company_id', $companyIds)
+            ->whereIn('lens_protection_id', $lensProtectionIds)
+            ->delete();
+
+        DB::commit();
+
+        return $this->successResponse(
+            ['model' => 'company_lens_protection'],
+            'Lens protections unassigned from companies successfully',
+            []
+        );
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->errorResponse(
+            ['model' => 'company_lens_protection'],
+            $e->getMessage(),
+            [],
+            422
+        );
+    }
+}
+
+
+
 }   
