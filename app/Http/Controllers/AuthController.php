@@ -47,10 +47,20 @@ class AuthController extends Controller
         $logoUrl = $companyLogo ? $logourl . $companyLogo : null;
         $user->load(['Employedata', 'Companydata']); // Eager load relationships
         $filteredUserData = [];
+
+
+        $pdMissing = false;
+        $latestPrescription = null;
+
         if ($user->role === 'employee') {
 
 
             $latestPrescription = PrecriptionDetails::where('employee_id', $user->employee_id)->latest()->first();
+
+            if (is_null($latestPrescription) || is_null($latestPrescription->pupil_distance_online)) {
+                $pdMissing = true;
+            }
+
 
             $filteredUserData = [
                 'name' => $user->name,
@@ -71,6 +81,7 @@ class AuthController extends Controller
                 'address' => optional($user->Companydata)->address,
             ];
         }
+
         $token = $user->createToken('auth_token')->plainTextToken;
         return $this->successResponse(array('model' => 'users'), 'User Login successfully', [
             'access_token' => $token,
@@ -80,6 +91,8 @@ class AuthController extends Controller
             'order_count' => Order::where('employee_id', $user->employee_id)->count(),
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
+            'is_pd_missing' => $pdMissing,
+            'pd_message' => $pdMissing ? 'Your PD measurement is not saved in the existing prescription. Please save it here.' : null,
         ]);
     }
 

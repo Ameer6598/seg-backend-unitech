@@ -795,6 +795,42 @@ class OrderController extends Controller
         ]);
     }
 
+
+    public function postpdonline(Request $request)
+    {
+        try {
+            $employeeId = auth('sanctum')->user()->employee_id;
+
+            // Validate input
+            $request->validate([
+                'pupil_distance_online' => 'required|numeric',
+                'od_left_2_pds_online' => 'nullable|numeric',
+                'od_right_2_pds_online' => 'nullable|numeric',
+            ]);
+
+
+            $latestPrescription = PrecriptionDetails::where('employee_id', $employeeId)->latest()->first();
+
+            $data = [
+                'pupil_distance_online' => $request->pupil_distance_online,
+                'od_left_2_pds_online' => $request->od_left_2_pds_online,
+                'od_right_2_pds_online' => $request->od_right_2_pds_online,
+            ];
+
+            if ($latestPrescription) {
+                $latestPrescription->update($data);
+            } else {
+                $data['employee_id'] = $employeeId;
+                PrecriptionDetails::create($data);
+            }
+
+            return $this->successResponse(null, 'PD data saved successfully', []);
+        } catch (\Exception $e) {
+            Log::error('Error in postpdonline: ' . $e->getMessage());
+            return $this->errorResponse(null, 'Something went wrong while saving PD data', [], 500);
+        }
+    }
+
     public function companylist(Request $request)
     {
 

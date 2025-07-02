@@ -172,6 +172,10 @@
             Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
             Route::post('order/with-existing-prescription', [OrderController::class, 'existingPresOrder']);
 
+            Route::post('pd/save', [OrderController::class, 'postpdonline']);
+
+
+
             Route::get('get-employee-orders', [OrderController::class, 'getEmployeeOrders']);
             Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
             Route::post('change-employe-password', [EmployeeController::class, 'employepassword']);

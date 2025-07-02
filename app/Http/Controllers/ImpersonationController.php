@@ -106,6 +106,8 @@ class ImpersonationController extends Controller
 
         $latestPrescription = PrecriptionDetails::where('employee_id', $user->employee_id)->latest()->first();
 
+        $pdMissing = is_null($latestPrescription) || is_null($latestPrescription->pupil_distance_online);
+
 
         $filteredUserData = [
             'id' => $user->company_id,
@@ -115,7 +117,6 @@ class ImpersonationController extends Controller
             'phone_no' => optional($user->Companydata)->phone,
             'benefits' => optional($user->Companydata)->benefits,
             'address' => optional($user->Companydata)->address,
-
             'last_prescription' => $latestPrescription,
 
 
@@ -129,6 +130,8 @@ class ImpersonationController extends Controller
             'order_count' => Order::where('employee_id', $user->employee_id)->count(),
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
+            'is_pd_missing' => $pdMissing,
+            'pd_message' => $pdMissing ? 'Your PD measurement is not saved in the existing prescription. Please save it here.' : null,
         ]);
     }
 
