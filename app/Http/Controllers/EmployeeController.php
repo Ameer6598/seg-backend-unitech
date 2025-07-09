@@ -277,7 +277,7 @@ class EmployeeController extends Controller
             }
 
             DB::commit();
-            return $this->successResponse(['model' => 'employee'], 'Transactions processed successfully', [
+            return $this->successResponse(['model' => 'employee'], 'Benefits amounyt assign successfully', [
                 'transactions' => $transactions,
             ]);
         } catch (\Exception $e) {

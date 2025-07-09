@@ -533,7 +533,7 @@ class CompanyController extends Controller
 
             DB::commit();
 
-            return $this->successResponse(['model' => 'company'], 'Transaction processed successfully', [
+            return $this->successResponse(['model' => 'company'], 'Benefits amounyt assign successfully', [
                 'transaction_id' => $transaction->id,
                 'company_id' => $company->id,
                 'status' => 'success',

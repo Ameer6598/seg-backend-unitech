@@ -24,7 +24,7 @@ class AuthController extends Controller
     use ApiResponse;
 
 
-       public function login(Request $request)
+    public function login(Request $request)
     {
         $request->validate([
             'email' => 'required|string|email',
@@ -87,7 +87,10 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'role' => $user->role,
-            'benefit_amount' => Employee::where('id', $user->employee_id)->value('benefit_amount'),
+            'benefit_amount' => $user->role === 'employee'
+                ? Employee::where('id', $user->employee_id)->value('benefit_amount')
+                : Company::where('id', $user->company_id)->value('benefit_amount'),
+
             'order_count' => Order::where('employee_id', $user->employee_id)->count(),
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
