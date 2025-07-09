@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\CompanyTempOrderdetail;
 use App\Models\EmployeTempOrderdetail;
 
 class TempOrderController extends Controller
@@ -136,7 +137,6 @@ class TempOrderController extends Controller
             }
 
             DB::commit();
-            DB::commit();
 
             if (isset($temorderdetails)) {
                 return $this->successResponse(null, 'Order details saved successfully', $temorderdetails);
@@ -149,8 +149,132 @@ class TempOrderController extends Controller
         }
     }
 
+    public function saveCompanyOrderDetails(Request $request)
+    {
+        DB::beginTransaction();
 
+        try {
+            $companyId = auth('sanctum')->user()->company_id;
+            $step = $request->input('step');
 
+            if ($step == 1) {
+
+                $request->validate([
+                    'order_type' => 'required|string|max:255',
+                    'frame_type' => 'required|string|max:255',
+                    'frame_prescription' => 'required|string|max:255',
+                    'prescription_image' => 'nullable|image|max:2048',
+                    'od_left_sphere' => 'required|string|max:10',
+                    'od_left_cylinders' => 'required|string|max:10',
+                    'od_left_axis' => 'required|string|max:10',
+                    'od_left_nv_add' => 'required|string|max:10',
+                    'od_left_2_pds' => 'nullable|string|max:10',
+                    'od_right_sphere' => 'required|string|max:10',
+                    'od_right_cylinders' => 'required|string|max:10',
+                    'od_right_axis' => 'required|string|max:10',
+                    'od_right_nv_add' => 'required|string|max:10',
+                    'od_right_2_pds' => 'nullable|string|max:10',
+                    'pupil_distance' => 'nullable|string',
+
+                    'vertical_right' => 'nullable|string',
+                    'vertical_left' => 'nullable|string',
+                    'vertical_base_direction_right' => 'nullable|string',
+                    'vertical_base_direction_left' => 'nullable|string',
+                    'horizontal_rigth' => 'nullable|string',
+                    'horizontal_left' => 'nullable|string',
+                    'horizontal_base_direction_right' => 'nullable|string',
+                    'horizontal_base_direction_left' => 'nullable|string',
+                    'special_notes' => 'nullable|string',
+                ]);
+
+                $temorderdetails = CompanyTempOrderdetail::firstOrNew([
+                    'company_id' => $companyId
+                ]);
+
+                $temorderdetails->fill($request->only([
+                    'order_type',
+                    'frame_type',
+                    'frame_prescription',
+                    'od_left_sphere',
+                    'od_left_cylinders',
+                    'od_left_axis',
+                    'od_left_nv_add',
+                    'od_left_2_pds',
+                    'od_right_sphere',
+                    'od_right_cylinders',
+                    'od_right_axis',
+                    'od_right_nv_add',
+                    'od_right_2_pds',
+                    'pupil_distance',
+                    'vertical_right',
+                    'vertical_left',
+                    'vertical_base_direction_right',
+                    'vertical_base_direction_left',
+                    'horizontal_rigth',
+                    'horizontal_left',
+                    'horizontal_base_direction_right',
+                    'horizontal_base_direction_left',
+                    'special_notes',
+                ]));
+
+                if ($request->hasFile('prescription_image')) {
+                    if (!empty($temorderdetails->prescription_image)) {
+                        $oldImagePath = public_path($temorderdetails->prescription_image);
+                        if (file_exists($oldImagePath)) {
+                            unlink($oldImagePath);
+                        }
+                    }
+
+                    $temorderdetails->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
+                }
+
+                $temorderdetails->save();
+            } elseif ($step == 2) {
+                $request->validate([
+                    'frame_picture' => 'nullable|image|max:2048',
+                    'pupil_distance_online' => 'nullable|string',
+                    'od_left_2_pds_online' => 'nullable|string|max:10',
+                    'od_right_2_pds_online' => 'nullable|string|max:10',
+                ]);
+
+                $temorderdetails = CompanyTempOrderdetail::firstOrNew([
+                    'company_id' => $companyId
+                ]);
+
+                $temorderdetails->fill($request->only([
+                    'pupil_distance_online',
+                    'od_left_2_pds_online',
+                    'od_right_2_pds_online',
+                ]));
+
+                if ($request->hasFile('frame_picture')) {
+                    if (!empty($temorderdetails->frame_picture)) {
+                        $oldImagePath = public_path($temorderdetails->frame_picture);
+                        if (file_exists($oldImagePath)) {
+                            unlink($oldImagePath);
+                        }
+                    }
+
+                    $temorderdetails->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
+                }
+
+                $temorderdetails->save();
+            } else {
+                return $this->errorResponse(null, 'Invalid step provided', [], 400);
+            }
+
+            DB::commit();
+
+            if (isset($temorderdetails)) {
+                return $this->successResponse(null, 'Company order details saved successfully', $temorderdetails);
+            }
+
+            return $this->errorResponse(null, 'Order details not processed', [], 400);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(null, 'Something went wrong', ['error' => $e->getMessage()], 500);
+        }
+    }
 
     public function getEmployeeOrderDetails(Request $request)
     {
@@ -169,8 +293,22 @@ class TempOrderController extends Controller
         }
     }
 
+    public function getCompanyOrderDetails(Request $request)
+    {
+        try {
+            $companyId = auth('sanctum')->user()->company_id;
 
+            $orderDetails = CompanyTempOrderdetail::where('company_id', $companyId)->first();
 
+            return $this->successResponse(
+                null,
+                'Company order details fetched successfully',
+                $orderDetails
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse(['model' => 'company_order_details'], 'Failed to fetch company order details', ['error' => $e->getMessage()], 500);
+        }
+    }
     private function uploadImages($image, $directory = 'products')
     {
         $destinationPath = public_path("projectimages/{$directory}");
@@ -190,4 +328,8 @@ class TempOrderController extends Controller
             dd("Image move failed: $fileName");
         }
     }
+
+
+
+    
 }

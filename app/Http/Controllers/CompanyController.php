@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Company;
+use App\Models\Transaction;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use App\Models\CompanyProduct;
@@ -483,6 +484,63 @@ class CompanyController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse(['model' => 'employe'], $e->getMessage(), [], 422);
+        }
+    }
+
+    public function bulkUpdateForCompany(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|numeric',
+            'type' => 'required|in:credit,debit',
+            'starting_date' => 'nullable|date',
+            'ending_date' => 'nullable|date|after_or_equal:starting_date',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Get the authenticated user's company_id
+            $companyId = auth('sanctum')->user()->company_id;
+            $company = Company::findOrFail($companyId);
+
+            $amount = $data['amount'];
+            $type = $data['type'];
+
+            // Update benefit_amount
+            if ($type === 'credit') {
+                $company->benefit_amount += $amount;
+            } else {
+                $company->benefit_amount -= $amount;
+            }
+
+            // Optional: update starting and ending dates if provided
+            if (isset($data['starting_date'])) {
+                $company->starting_date = $data['starting_date'];
+            }
+            if (isset($data['ending_date'])) {
+                $company->ending_date = $data['ending_date'];
+            }
+
+            $company->save();
+
+            // Store the transaction
+            $transaction = Transaction::create([
+                'company_id' => $company->id,
+                'amount' => $amount,
+                'balance' => $company->benefit_amount,
+                'transaction_type' => $type,
+            ]);
+
+            DB::commit();
+
+            return $this->successResponse(['model' => 'company'], 'Transaction processed successfully', [
+                'transaction_id' => $transaction->id,
+                'company_id' => $company->id,
+                'status' => 'success',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 424);
         }
     }
 

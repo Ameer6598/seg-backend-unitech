@@ -140,6 +140,10 @@
         });
         Route::middleware('role:company')->group(function () {
 
+
+            Route::post('company/orders/temp-store', [TempOrderController::class, 'saveCompanyOrderDetails']);
+            Route::get('company/temp/order-details', [TempOrderController::class, 'getCompanyOrderDetails']);
+
             Route::get('getMyCompanyDetails', [CompanyController::class, 'getMyCompanyDetails']);
             Route::prefix('employee/')->group(function () {
                 Route::post('import', [EmployeeController::class, 'import']);
@@ -149,6 +153,8 @@
                 Route::post('assign-product', [EmployeeController::class, 'assignProduct']);
                 // Route::post('update',[EmployeeController::class,'update']);
                 Route::post('update-benefit-amount', [EmployeeController::class, 'bulkUpdate']);
+                Route::post('update-company-benefit-amount', [CompanyController::class, 'bulkUpdateForCompany']);
+
                 Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
                 Route::get('{employeeId}', [EmployeeController::class, 'getEmployee']);
             });
@@ -162,6 +168,11 @@
             Route::post('employee/update', [EmployeeController::class, 'update']);
         });
         Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
+        Route::middleware('role:company,employee')->group(function () {
+            Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
+        });
+
+
         Route::middleware('role:employee')->group(function () {
             Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
             Route::get('get-product-manufactures', [ProductController::class, 'getManufacturers']);

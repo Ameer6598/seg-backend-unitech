@@ -25,6 +25,7 @@ use App\Mail\OrderConfirmationMail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use App\Models\CompanyTempOrderdetail;
 use App\Models\EmployeTempOrderdetail;
 use Illuminate\Support\Facades\Validator;
 
@@ -118,18 +119,15 @@ class OrderController extends Controller
         $employeeId = auth('sanctum')->user()->employee_id;
         $companyId = auth('sanctum')->user()->company_id;
 
-
-        $employee = Employee::findOrFail($employeeId);
-
-        if ($employee->ending_date && \Carbon\Carbon::now()->gt(\Carbon\Carbon::parse($employee->ending_date))) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Your benefit amount has expired.',
-            ], 403);
-        }
+        $user = auth('sanctum')->user();
 
         $pres = new PrecriptionDetails();
-        $pres->employee_id = $employeeId;
+        if ($user->role === 'employee') {
+            $pres->employee_id = $user->employee_id;
+        } elseif ($user->role === 'company') {
+            $pres->company_id = $user->company_id;
+        }
+
 
         $pres->fill($request->only([
             'frame_type',
@@ -171,8 +169,22 @@ class OrderController extends Controller
 
 
         $order = new Order();
-        $order->employee_id = $employeeId;
-        $order->company_id = $companyId;
+
+
+        if ($user->role === 'employee') {
+            $order->employee_id = $employeeId;
+            $order->company_id = $companyId;
+            $order->order_by = 'employee'; // 👈 Set by employee
+
+        } elseif ($user->role === 'company') {
+
+            $order->employee_id = null;
+            $order->company_id = $user->company_id;
+            $order->order_by = 'company'; // 👈 Set by company
+
+        }
+
+
         $order->fill($request->only([
             'blue_light_protection',
             'order_type',
@@ -318,27 +330,51 @@ class OrderController extends Controller
         // Case 2: Benefit + Credit
         elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
             try {
-                $employee = Employee::findOrFail($employeeId);
-                $remainingAmount = $request->net_total;
-                $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+                $user = auth('sanctum')->user();
 
-                // Deduct from employee benefit
-                if ($deductionAmount > 0) {
-                    $employee->benefit_amount -= $deductionAmount;
-                    $employee->save();
+                if ($user->role === 'employee') {
+                    $employee = Employee::findOrFail($employeeId);
+                    $remainingAmount = $request->net_total;
+                    $deductionAmount = min($employee->benefit_amount, $remainingAmount);
 
-                    Transaction::create([
-                        'employee_id' => $employeeId,
-                        'transaction_type' => 'debit',
-                        'amount' => $deductionAmount,
-                        'balance' => $employee->benefit_amount,
-                        'description' => 'Order payment from benefit',
-                    ]);
+                    // Deduct from employee benefit
+                    if ($deductionAmount > 0) {
+                        $employee->benefit_amount -= $deductionAmount;
+                        $employee->save();
 
-                    $this->deleteEmployeeOrderDetails($employeeId);
-                    $remainingAmount -= $deductionAmount;
+                        Transaction::create([
+                            'employee_id' => $employeeId,
+                            'transaction_type' => 'debit',
+                            'amount' => $deductionAmount,
+                            'balance' => $employee->benefit_amount,
+                            'description' => 'Order payment from benefit',
+                        ]);
+
+                        $this->deleteEmployeeOrderDetails($employeeId);
+                        $remainingAmount -= $deductionAmount;
+                    }
+                } elseif ($user->role === 'company') {
+                    $companyId = $user->company_id;
+                    $employee = Employee::findOrFail($employeeId);
+                    $remainingAmount = $request->net_total;
+                    $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+
+                    if ($deductionAmount > 0) {
+                        $employee->benefit_amount -= $deductionAmount;
+                        $employee->save();
+
+                        Transaction::create([
+                            'employee_id' => $employeeId,
+                            'transaction_type' => 'debit',
+                            'amount' => $deductionAmount,
+                            'balance' => $employee->benefit_amount,
+                            'description' => 'Order payment from benefit (Company)',
+                        ]);
+
+                        $this->deleteCompanyOrderDetails($companyId);
+                        $remainingAmount -= $deductionAmount;
+                    }
                 }
-
                 // Process remaining amount via Stripe if any
                 if ($remainingAmount > 0) {
                     Stripe::setApiKey(config('services.stripe.secret'));
@@ -395,24 +431,55 @@ class OrderController extends Controller
             }
         } else {
             try {
-                $employee = Employee::findOrFail($employeeId);
-                $deductionAmount = $request->net_total;
 
-                if ($employee->benefit_amount < $deductionAmount) {
-                    $deductionAmount = $employee->benefit_amount;
+                $user = auth('sanctum')->user();
+
+                if ($user->role === 'employee') {
+                    $employeeId = $user->employee_id;
+
+                    $employee = Employee::findOrFail($employeeId);
+                    $deductionAmount = $request->net_total;
+
+                    if ($employee->benefit_amount < $deductionAmount) {
+                        $deductionAmount = $employee->benefit_amount;
+                    }
+
+                    $employee->benefit_amount -= $deductionAmount;
+                    $employee->save();
+
+                    $this->deleteEmployeeOrderDetails($employeeId);
+
+                    Transaction::create([
+                        'employee_id' => $employeeId,
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $employee->benefit_amount,
+                        'description' => 'Order payment from benefit',
+                    ]);
+                } elseif ($user->role === 'company') {
+                    $companyId = $user->company_id;
+
+                    $company = Company::findOrFail($companyId);
+                    $deductionAmount = $request->net_total;
+
+                    if ($company->balance < $deductionAmount) {
+                        $deductionAmount = $company->balance;
+                    }
+
+                    $company->balance -= $deductionAmount;
+                    $company->save();
+
+                    $this->deleteCompanyOrderDetails($companyId);
+
+
+                    Transaction::create([
+                        'company_id' => $companyId,
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $company->balance,
+                        'description' => 'Order payment from company balance',
+                    ]);
                 }
-
-                $employee->benefit_amount -= $deductionAmount;
-                $employee->save();
-                $this->deleteEmployeeOrderDetails($employeeId);
-
-                Transaction::create([
-                    'employee_id' => $employeeId,
-                    'transaction_type' => 'debit',
-                    'amount' => $deductionAmount,
-                    'balance' => $employee->benefit_amount,
-                    'description' => 'Order payment from benefit',
-                ]);
             } catch (\Exception $e) {
                 Log::error('Benefit Payment Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to process benefit payment.'], 500);
@@ -861,6 +928,29 @@ class OrderController extends Controller
 
         $orderDetails->delete();
     }
+
+
+    public function deleteCompanyOrderDetails($companyId)
+    {
+        $orderDetails = CompanyTempOrderdetail::where('company_id', $companyId)->first();
+
+        if (!$orderDetails) {
+            return;
+        }
+
+        if ($orderDetails->prescription_image && file_exists(public_path($orderDetails->prescription_image))) {
+            unlink(public_path($orderDetails->prescription_image));
+        }
+
+        if ($orderDetails->frame_picture && file_exists(public_path($orderDetails->frame_picture))) {
+            unlink(public_path($orderDetails->frame_picture));
+        }
+
+        $orderDetails->delete();
+    }
+
+
+
     private function uploadImages($image, $directory = 'products')
     {
         $destinationPath = public_path("projectimages/{$directory}");
