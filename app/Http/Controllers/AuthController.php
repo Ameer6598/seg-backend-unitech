@@ -24,7 +24,7 @@ class AuthController extends Controller
     use ApiResponse;
 
 
-    public function login(Request $request)
+       public function login(Request $request)
     {
         $request->validate([
             'email' => 'required|string|email',
@@ -95,6 +95,7 @@ class AuthController extends Controller
             'pd_message' => $pdMissing ? 'Your PD measurement is not saved in the existing prescription. Please save it here.' : null,
         ]);
     }
+
 
     public function set(Request $request)
     {

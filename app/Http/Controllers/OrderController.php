@@ -794,8 +794,6 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
-
-
     public function postpdonline(Request $request)
     {
         try {
@@ -826,10 +824,10 @@ class OrderController extends Controller
 
             return $this->successResponse(null, 'PD data saved successfully', []);
         } catch (\Exception $e) {
-            Log::error('Error in postpdonline: ' . $e->getMessage());
-            return $this->errorResponse(null, 'Something went wrong while saving PD data', [], 500);
+            return $this->errorResponse(null, $e->getMessage(), [], 500);
         }
     }
+
 
     public function companylist(Request $request)
     {

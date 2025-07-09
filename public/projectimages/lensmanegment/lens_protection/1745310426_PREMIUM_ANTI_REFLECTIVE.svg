@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="240" height="180" viewBox="0 0 240 180">
+  <defs>
+    <linearGradient id="linear-gradient" x1="0.016" y1="0.47" x2="0.986" y2="0.222" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#e3e3e3"/>
+      <stop offset="0.084" stop-color="#86858c"/>
+      <stop offset="0.251" stop-color="#b8b8ba"/>
+      <stop offset="0.398" stop-color="#969697"/>
+      <stop offset="0.561" stop-color="#fdfcff"/>
+      <stop offset="0.594" stop-color="#858586"/>
+      <stop offset="0.841" stop-color="#8d8b8b"/>
+      <stop offset="1" stop-color="#d2d2d2"/>
+    </linearGradient>
+    <clipPath id="clip-_14_-_PREMIUM_ANTI_REFLECTIVE">
+      <rect width="240" height="180"/>
+    </clipPath>
+  </defs>
+  <g id="_14_-_PREMIUM_ANTI_REFLECTIVE" data-name="14 - PREMIUM ANTI REFLECTIVE" clip-path="url(#clip-_14_-_PREMIUM_ANTI_REFLECTIVE)">
+    <rect width="240" height="180" fill="#fff"/>
+    <g id="Group_15" data-name="Group 15">
+      <g id="Group_12" data-name="Group 12" transform="translate(-0.5 0.662)">
+        <path id="Path_39" data-name="Path 39" d="M-4248.376,10.2l2.663-3.863,3.825,2.775" transform="translate(4293)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <line id="Line_2" data-name="Line 2" x2="9" y2="47" transform="translate(47.5 7.5)" fill="none" stroke="#000" stroke-width="2"/>
+        <line id="Line_3" data-name="Line 3" x2="21" y2="16" transform="translate(35.5 38.5)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+      </g>
+      <g id="Group_13" data-name="Group 13" transform="translate(9.5 -5.338)">
+        <path id="Path_39-2" data-name="Path 39" d="M-4248.376,10.2l2.663-3.863,3.825,2.775" transform="translate(4293)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <line id="Line_2-2" data-name="Line 2" x2="9" y2="47" transform="translate(47.5 7.5)" fill="none" stroke="#000" stroke-width="2"/>
+        <line id="Line_3-2" data-name="Line 3" x2="21" y2="16" transform="translate(35.5 38.5)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+      </g>
+      <g id="Group_14" data-name="Group 14" transform="translate(-9.5 5.662)">
+        <path id="Path_39-3" data-name="Path 39" d="M-4248.376,10.2l2.663-3.863,3.825,2.775" transform="translate(4293)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        <line id="Line_2-3" data-name="Line 2" x2="9" y2="47" transform="translate(47.5 7.5)" fill="none" stroke="#000" stroke-width="2"/>
+        <line id="Line_3-3" data-name="Line 3" x2="21" y2="16" transform="translate(35.5 38.5)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="2"/>
+      </g>
+    </g>
+    <g id="Group_1" data-name="Group 1" transform="translate(39.634 32.077)">
+      <path id="Path_2" data-name="Path 2" d="M-2301.445,640.188c-4.429,16.659-14.253,34.849-21.751,40.341-8.979,6.576-36.168,11.557-69.048,10.672-36.286-.977-52.481-10.166-59.816-16.868s-35.832-46.68-32.349-73.065c1.8-7.915,3.956-13.659,14.361-21.071,9.485-6.758,55.747-22.643,108.553-22.087,38.9.409,56.757,8.142,60.085,11.7S-2287.661,588.34-2301.445,640.188Z" transform="translate(2485.053 -554.26)" opacity="0.1"/>
+      <path id="Path_1" data-name="Path 1" d="M-2291.032,593.3c-1.276-17.774-9.352-32.8-42.517-37.746s-80.256-.366-113.6,10.261-35.181,19.24-37.718,34.265c-1.8,13.743,6.569,39.762,18.479,57.9s15.575,22.355,27.3,27.485c32.066,14.109,71.461,10.662,93.815,6.963s26.753-8.429,31.883-16.125C-2297.086,651.747-2289.757,611.069-2291.032,593.3Zm-10.477,46.189c-4.429,16.659-14.253,34.849-21.751,40.341-8.979,6.576-36.168,11.557-69.048,10.672-36.286-.977-52.481-10.166-59.815-16.868s-35.832-46.68-32.35-73.065c1.8-7.915,3.956-13.659,14.361-21.071,9.485-6.758,55.747-22.643,108.553-22.087,38.9.409,56.756,8.142,60.085,11.7S-2287.726,587.636-2301.51,639.485Z" transform="translate(2485.118 -553.557)" fill="url(#linear-gradient)"/>
+    </g>
+  </g>
+</svg>
