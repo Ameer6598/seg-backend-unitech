@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
+use App\Models\CompanySubadminsPermissions;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -80,7 +81,25 @@ class AuthController extends Controller
                 'phone_no' => optional($user->Companydata)->phone,
                 'address' => optional($user->Companydata)->address,
             ];
-        }
+        }elseif ($user->role === 'company_subadmin') {
+        $permissions = CompanySubadminsPermissions::where('user_id', $user->id)->first();
+
+        $filteredUserData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone_no' => $permissions->phone ?? null,
+            'address' => $permissions->address ?? null,
+            'company' => [
+                'id' => $user->company_id,
+                'company_name' => optional($user->Companydata)->company_name,
+                'phone' => optional($user->Companydata)->phone,
+                'address' => optional($user->Companydata)->address,
+                'logo' => $logoUrl,
+            ],
+            'permissions' => $permissions,
+        ];
+    }
 
         $token = $user->createToken('auth_token')->plainTextToken;
         return $this->successResponse(array('model' => 'users'), 'User Login successfully', [

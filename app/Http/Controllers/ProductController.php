@@ -467,18 +467,21 @@ class ProductController extends Controller
     }
 
 
-    public function getCompanyProducts()
+    public function getCompanyProducts(Request $request)
     {
         try {
             $companyId = auth('sanctum')->user()->company_id;
-            $baseUrl = config('app.url');
             $mediaURL = env('BASE_URL');
 
+            $page = $request->input('page');
+            $perPage = $request->input('per_page');
+            $productName = $request->input('product_name');
+            $manufacturerName = $request->input('manufacturer_name');
+
             $productIds = CompanyProduct::where('company_id', $companyId)
-                ->pluck('product_id'); // Get array of product IDs
+                ->pluck('product_id');
 
-            $products = Product::with([
-
+            $productsQuery = Product::with([
                 'productCategories:category_id,category_name',
                 'productsubcate:id,category_id,subcategory_name',
                 'frameSizes:frame_size_id,frame_size_name',
@@ -487,31 +490,41 @@ class ProductController extends Controller
                 'shape:shape_id,shape_name',
                 'style:style_id,style_name',
                 'manufacturer',
-                'variants'
+                'variants.variant_images'
             ])
-                ->whereIn('product_id', $productIds)
                 ->where('product_status', 1)
-                ->get();
+                ->whereIn('product_id', $productIds);
 
-            // Process products and add base URL to image paths
-            $products->map(function ($product) use ($mediaURL) {
+            $isFiltered = false;
 
+            if ($productName) {
+                $productsQuery->where('product_name', 'LIKE', "%$productName%");
+                $isFiltered = true;
+            }
+
+            if ($manufacturerName) {
+                $productsQuery->where('manufacturer_name', $manufacturerName);
+                $isFiltered = true;
+            }
+
+            if ($page && $perPage && !$isFiltered) {
+                $products = $productsQuery->paginate($perPage, ['*'], 'page', $page);
+                $collection = $products->getCollection();
+            } else {
+                $products = $productsQuery->get();
+                $collection = $products;
+            }
+
+            $collection->transform(function ($product) use ($mediaURL) {
                 $product->featured_image = $mediaURL . $product->featured_image;
-                // Remove unnecessary attributes
-                unset($product->category);
-                unset($product->sub_category);
-                unset($product->rim_type);
-                unset($product->manufacturer_name);
 
+                unset($product->category, $product->sub_category, $product->rim_type, $product->manufacturer_name);
 
-                // Process frame sizes
                 $product->frameSizes->map(function ($frameSize) {
-                    unset($frameSize->pivot); // Remove the pivot attribute
+                    unset($frameSize->pivot);
                     return $frameSize;
                 });
 
-
-                // Process variant images
                 foreach ($product->variants as $variant) {
                     if (!empty($variant->variant_images)) {
                         foreach ($variant->variant_images as $image) {
@@ -520,38 +533,34 @@ class ProductController extends Controller
                     }
                 }
 
-                // Convert tags to array of objects
-                if (!empty($product->product_tags)) {
-                    $product->product_tags = collect(explode(',', $product->product_tags))
-                        ->map(fn($tag) => ['name' => trim($tag)])
-                        ->toArray();
-                } else {
-                    $product->product_tags = [];
-                }
+                $product->product_tags = !empty($product->product_tags)
+                    ? collect(explode(',', $product->product_tags))->map(fn($tag) => ['name' => trim($tag)])->toArray()
+                    : [];
 
-                if (!empty($product->frame_features)) {
-                    $product->frame_features = collect(explode(',', $product->frame_features))
-                        ->map(fn($tag) => ['name' => trim($tag)])
-                        ->toArray();
-                } else {
-                    $product->frame_features = [];
-                }
-
-
+                $product->frame_features = !empty($product->frame_features)
+                    ? collect(explode(',', $product->frame_features))->map(fn($tag) => ['name' => trim($tag)])->toArray()
+                    : [];
 
                 return $product;
             });
 
-            return $this->successResponse(['model' => 'products'], 'Company products retrieved successfully', [
-                'products' => $products,
-            ]);
+            if ($products instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+                $products->setCollection($collection);
+                return $this->successResponse(['model' => 'products'], 'Company products retrieved successfully', [
+                    'products' => $products,
+                ]);
+            } else {
+                return $this->successResponse(['model' => 'products'], 'Company products retrieved successfully', [
+                    'products' => $collection,
+                ]);
+            }
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'products'], $e->getMessage(), [], 422);
         }
     }
 
 
-    
+
 
 
     public function getemployeeProducts(Request $request)

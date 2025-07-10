@@ -17,7 +17,7 @@ class RunUpdateOrderStatusJob extends Command
     public function handle()
     {
 
-        Log::info('UpdateOrderStatusJob started at ' . Carbon::now()->toDateTimeString());
+        // Log::info('UpdateOrderStatusJob started at ' . Carbon::now()->toDateTimeString());
         $this->info('Checking Stripe invoices for orders...');
 
         try {

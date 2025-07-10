@@ -121,6 +121,7 @@ class OrderController extends Controller
 
         $user = auth('sanctum')->user();
 
+
         $pres = new PrecriptionDetails();
         if ($user->role === 'employee') {
             $pres->employee_id = $user->employee_id;
@@ -354,21 +355,23 @@ class OrderController extends Controller
                         $remainingAmount -= $deductionAmount;
                     }
                 } elseif ($user->role === 'company') {
+
                     $companyId = $user->company_id;
-                    $employee = Employee::findOrFail($employeeId);
+
+                    $company = Company::findOrFail($companyId);
                     $remainingAmount = $request->net_total;
-                    $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+                    $deductionAmount = min($company->benefit_amount, $remainingAmount);
 
                     if ($deductionAmount > 0) {
-                        $employee->benefit_amount -= $deductionAmount;
-                        $employee->save();
+                        $company->benefit_amount -= $deductionAmount;
+                        $company->save();
 
                         Transaction::create([
-                            'employee_id' => $employeeId,
+                            'company_id' => $companyId,
                             'transaction_type' => 'debit',
                             'amount' => $deductionAmount,
-                            'balance' => $employee->benefit_amount,
-                            'description' => 'Order payment from benefit (Company)',
+                            'balance' => $company->benefit_amount,
+                            'description' => 'Order payment from benefit',
                         ]);
 
                         $this->deleteCompanyOrderDetails($companyId);
@@ -462,11 +465,11 @@ class OrderController extends Controller
                     $company = Company::findOrFail($companyId);
                     $deductionAmount = $request->net_total;
 
-                    if ($company->balance < $deductionAmount) {
-                        $deductionAmount = $company->balance;
+                    if ($company->benefit_amount < $deductionAmount) {
+                        $deductionAmount = $company->benefit_amount;
                     }
 
-                    $company->balance -= $deductionAmount;
+                    $company->benefit_amount -= $deductionAmount;
                     $company->save();
 
                     $this->deleteCompanyOrderDetails($companyId);
@@ -487,9 +490,19 @@ class OrderController extends Controller
         }
 
 
+        $role = auth('sanctum')->user()->role;
 
-        $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
+        if ($role === 'employee') {
+            $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
         $email = $user->email;
+
+
+        } elseif ($role === 'company') {
+            $user = User::where('role', 'company')->where('company_id', $companyId)->first();
+        $email = $user->email;
+
+        }
+
 
         Mail::to($email)->send(new OrderConfirmationMail($order));
 
