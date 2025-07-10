@@ -54,7 +54,7 @@
             });
             Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
 
-            Route::middleware('role:owner,company')->group(function () {
+            Route::middleware('role:owner,company,company_subadmin')->group(function () {
                 Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
             });
 
@@ -140,13 +140,15 @@
                 Route::post('update-order-status', [OrderController::class, 'updateOrderStatus']);
                 Route::get('employees', [EmployeeController::class, 'getAll']);
             });
-            Route::middleware('role:company')->group(function () {
+            Route::middleware('role:company,company_subadmin')->group(function () {
 
 
                 Route::post('company/orders/temp-store', [TempOrderController::class, 'saveCompanyOrderDetails']);
                 Route::get('company/temp/order-details', [TempOrderController::class, 'getCompanyOrderDetails']);
                 Route::post('create/company/subadmin', [CompanySubAdminController::class, 'createsubadmin']);
                 Route::post('update/company/subadmin', [CompanySubAdminController::class, 'updateSubadmin']);
+                Route::delete('delete/company/subadmin/{id}', [CompanySubAdminController::class, 'deleteSubadminById']);
+                Route::get('get/company/subadmin', [CompanySubAdminController::class, 'getSubadmins']);
 
 
 
@@ -170,11 +172,11 @@
                 Route::post('change-company-password', [CompanyController::class, 'companypassword']);
                 Route::post('update-company', [CompanyController::class, 'updatedetails']);
             });
-            Route::middleware('role:company,owner')->group(function () {
+            Route::middleware('role:company,company_subadmin,owner')->group(function () {
                 Route::post('employee/update', [EmployeeController::class, 'update']);
             });
             Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
-            Route::middleware('role:company,employee')->group(function () {
+            Route::middleware('role:company,company_subadmin,employee')->group(function () {
                 Route::post('order/with-new-prescription', [OrderController::class, 'newPresOrder']);
                 Route::get('lens-management/all', [lensManegmentController::class, 'getall']);
                 Route::get('get-product-manufactures', [ProductController::class, 'getManufacturers']);
@@ -205,7 +207,7 @@
             });
 
 
-            Route::middleware('role:owner,company')->group(function () {
+            Route::middleware('role:owner,company,company_subadmin')->group(function () {
                 // Categories
                 Route::post('/categories', [ProductController::class, 'createCategory']);
                 Route::get('/categories', [ProductController::class, 'getCategories']);

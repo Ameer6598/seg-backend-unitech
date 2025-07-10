@@ -28,7 +28,7 @@ class CompanySubAdminController extends Controller
 
                 'address' => 'required|string',
                 'phone' => 'required',
-                'benefits_amount_assign' => 'required|in:0,1',
+                'assign_benefits_to_employee' => 'required|in:0,1',
                 'frame_read' => 'required|in:0,1',
                 'frame_assign' => 'required|in:0,1',
                 'assigned_lenses_read' => 'required|in:0,1',
@@ -70,7 +70,7 @@ class CompanySubAdminController extends Controller
                 'company_name' => $user->Companydata->company_name,
                 'address' => $request->address,
                 'phone' => $request->phone,
-                'benefits_amount_assign' => $request->benefits_amount_assign,
+                'assign_benefits_to_employee' => $request->assign_benefits_to_employee,
                 'frame_read' => $request->frame_read,
                 'frame_assign' => $request->frame_assign,
                 'assigned_lenses_read' => $request->assigned_lenses_read,
@@ -107,24 +107,46 @@ class CompanySubAdminController extends Controller
         }
     }
 
+    public function getSubadmins(Request $request)
+    {
+        $authUser = auth('sanctum')->user();
 
+        // Ensure only 'company' role can access this
+        if ($authUser->role !== 'company') {
+            return $this->errorResponse(null, 'Unauthorized access', [], 403);
+        }
+
+        // Get all subadmins of the company
+        $subadmins = User::with('Permission') // if relation is set as 'Permission' in User model
+            ->where('company_id', $authUser->company_id)
+            ->where('role', 'company_subadmin')
+            ->get();
+
+        return $this->successResponse(
+            ['model' => 'subadmins'],
+            'Subadmins retrieved successfully',
+            $subadmins
+        );
+    }
 
     public function updateSubadmin(Request $request)
     {
         try {
 
-            $User = auth('sanctum')->user();
+
 
             $request->validate([
+
+                'user_id' => 'required',
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $User->id,
+                'email' => 'required|email|unique:users,email,' . $request->user_id,
                 'password' => 'nullable|string|min:6',
                 'address' => 'required|string',
                 'phone' => 'required',
                 'status' => 'required|in:0,1', // ✅ Added validation for status
 
 
-                'benefits_amount_assign' => 'required|in:0,1',
+                'assign_benefits_to_employee' => 'required|in:0,1',
                 'frame_read' => 'required|in:0,1',
                 'frame_assign' => 'required|in:0,1',
                 'assigned_lenses_read' => 'required|in:0,1',
@@ -142,7 +164,7 @@ class CompanySubAdminController extends Controller
             DB::beginTransaction();
 
             // Update the subadmin user
-            $user = User::where('id', $User->id)
+            $user = User::where('id', $request->user_id,)
                 ->where('company_id', $companyId)
                 ->where('role', 'company_subadmin')
                 ->firstOrFail();
@@ -160,7 +182,7 @@ class CompanySubAdminController extends Controller
             $permissions->update([
                 'address' => $request->address,
                 'phone' => $request->phone,
-                'benefits_amount_assign' => $request->benefits_amount_assign,
+                'assign_benefits_to_employee' => $request->assign_benefits_to_employee,
                 'frame_read' => $request->frame_read,
                 'frame_assign' => $request->frame_assign,
                 'assigned_lenses_read' => $request->assigned_lenses_read,
@@ -195,22 +217,19 @@ class CompanySubAdminController extends Controller
     }
 
 
-    public function deleteSubadmin(Request $request)
+    public function deleteSubadminById($id)
     {
         try {
-            $User = auth('sanctum')->user();
-            $companyId = $User->company_id;
+            $companyId = auth('sanctum')->user()->company_id;
 
             DB::beginTransaction();
 
-
-            $user = User::where('id', $User->id)
+            $user = User::where('id', $id)
                 ->where('company_id', $companyId)
                 ->where('role', 'company_subadmin')
                 ->firstOrFail();
 
             CompanySubadminsPermissions::where('user_id', $user->id)->delete();
-
             $user->delete();
 
             DB::commit();

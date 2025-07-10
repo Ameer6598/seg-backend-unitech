@@ -60,6 +60,11 @@ class User extends Authenticatable
         return $this->hasOne(Company::class,'id','company_id');
     }
 
+    // User.php
+public function permission()
+{
+    return $this->hasOne(CompanySubadminsPermissions::class, 'user_id');
+}
 
 
 

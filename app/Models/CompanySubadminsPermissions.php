@@ -21,7 +21,7 @@ class CompanySubadminsPermissions extends Model
         'employee_update',
         'employee_delete',
         'assign_product_to_employee',
-        'benefits_amount_assign',
+        'assign_benefits_to_employee',
     ];
 
     public function getFrameReadAttribute($value)
@@ -74,8 +74,8 @@ class CompanySubadminsPermissions extends Model
         return (bool) $this->attributes['assign_product_to_employee'];
     }
 
-        public function getBenefitsAmountAssignAttribute($value)
+        public function getAssignBenefitsToEmployeeAttribute($value)
     {
-        return (bool) $this->attributes['benefits_amount_assign'];
+        return (bool) $this->attributes['assign_benefits_to_employee'];
     }
 }
