@@ -81,25 +81,37 @@ class AuthController extends Controller
                 'phone_no' => optional($user->Companydata)->phone,
                 'address' => optional($user->Companydata)->address,
             ];
-        }elseif ($user->role === 'company_subadmin') {
-        $permissions = CompanySubadminsPermissions::where('user_id', $user->id)->first();
+        } elseif ($user->role === 'company_subadmin') {
+            $permission = CompanySubadminsPermissions::where('user_id', $user->id)->first();
 
-        $filteredUserData = [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone_no' => $permissions->phone ?? null,
-            'address' => $permissions->address ?? null,
-            'company' => [
-                'id' => $user->company_id,
-                'company_name' => optional($user->Companydata)->company_name,
-                'phone' => optional($user->Companydata)->phone,
-                'address' => optional($user->Companydata)->address,
-                'logo' => $logoUrl,
-            ],
-            'permissions' => $permissions,
-        ];
-    }
+            $filteredUserData = [
+                'id' => $permission->id ?? null,
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'role' => $user->role,
+                'company_id' => $user->company_id,
+                'employee_id' => $user->employee_id,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+                'company_name' => $permission->company_name ?? null,
+                'address' => $permission->address ?? null,
+                'phone' => $permission->phone ?? null,
+                'permissions' => [
+                    'assign_benefits_to_employee' => (bool) ($permission->assign_benefits_to_employee ?? false),
+                    'frame_read' => (bool) ($permission->frame_read ?? false),
+                    'frame_assign' => (bool) ($permission->frame_assign ?? false),
+                    'assigned_lenses_read' => (bool) ($permission->assigned_lenses_read ?? false),
+                    'orders_list_read' => (bool) ($permission->orders_list_read ?? false),
+                    'new_order_create' => (bool) ($permission->new_order_create ?? false),
+                    'employee_create' => (bool) ($permission->employee_create ?? false),
+                    'employee_read' => (bool) ($permission->employee_read ?? false),
+                    'employee_update' => (bool) ($permission->employee_update ?? false),
+                    'employee_delete' => (bool) ($permission->employee_delete ?? false),
+
+                ],
+            ];
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
         return $this->successResponse(array('model' => 'users'), 'User Login successfully', [

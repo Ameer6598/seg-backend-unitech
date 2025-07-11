@@ -38,7 +38,7 @@ class CompanySubAdminController extends Controller
                 'employee_read' => 'required|in:0,1',
                 'employee_update' => 'required|in:0,1',
                 'employee_delete' => 'required|in:0,1',
-                'assign_product_to_employee' => 'required|in:0,1',
+
             ]);
 
             $companyId = auth('sanctum')->user()->company_id;
@@ -80,7 +80,7 @@ class CompanySubAdminController extends Controller
                 'employee_read' => $request->employee_read,
                 'employee_update' => $request->employee_update,
                 'employee_delete' => $request->employee_delete,
-                'assign_product_to_employee' => $request->assign_product_to_employee,
+
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -111,16 +111,46 @@ class CompanySubAdminController extends Controller
     {
         $authUser = auth('sanctum')->user();
 
-        // Ensure only 'company' role can access this
         if ($authUser->role !== 'company') {
             return $this->errorResponse(null, 'Unauthorized access', [], 403);
         }
 
-        // Get all subadmins of the company
-        $subadmins = User::with('Permission') // if relation is set as 'Permission' in User model
+        // Get all subadmins with their permissions
+        $subadmins = User::with('Permission')
             ->where('company_id', $authUser->company_id)
             ->where('role', 'company_subadmin')
-            ->get();
+            ->get()
+            ->map(function ($user) {
+                $permission = $user->Permission;
+
+                return [
+                    'id' => $permission->id ?? null,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'role' => $user->role,
+                    'company_id' => $user->company_id,
+                    'employee_id' => $user->employee_id,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                    'company_name' => $permission->company_name ?? null,
+                    'address' => $permission->address ?? null,
+                    'phone' => $permission->phone ?? null,
+                    'permissions' => [
+                        'assign_benefits_to_employee' => (bool) ($permission->assign_benefits_to_employee ?? false),
+                        'frame_read' => (bool) ($permission->frame_read ?? false),
+                        'frame_assign' => (bool) ($permission->frame_assign ?? false),
+                        'assigned_lenses_read' => (bool) ($permission->assigned_lenses_read ?? false),
+                        'orders_list_read' => (bool) ($permission->orders_list_read ?? false),
+                        'new_order_create' => (bool) ($permission->new_order_create ?? false),
+                        'employee_create' => (bool) ($permission->employee_create ?? false),
+                        'employee_read' => (bool) ($permission->employee_read ?? false),
+                        'employee_update' => (bool) ($permission->employee_update ?? false),
+                        'employee_delete' => (bool) ($permission->employee_delete ?? false),
+
+                    ],
+                ];
+            });
 
         return $this->successResponse(
             ['model' => 'subadmins'],
@@ -128,6 +158,7 @@ class CompanySubAdminController extends Controller
             $subadmins
         );
     }
+
 
     public function updateSubadmin(Request $request)
     {
@@ -139,7 +170,7 @@ class CompanySubAdminController extends Controller
 
                 'user_id' => 'required',
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $request->user_id,
+                'email' => 'required|email',
                 'password' => 'nullable|string|min:6',
                 'address' => 'required|string',
                 'phone' => 'required',
@@ -156,7 +187,6 @@ class CompanySubAdminController extends Controller
                 'employee_read' => 'required|in:0,1',
                 'employee_update' => 'required|in:0,1',
                 'employee_delete' => 'required|in:0,1',
-                'assign_product_to_employee' => 'required|in:0,1',
             ]);
 
             $companyId = auth('sanctum')->user()->company_id;
@@ -164,7 +194,11 @@ class CompanySubAdminController extends Controller
             DB::beginTransaction();
 
             // Update the subadmin user
-            $user = User::where('id', $request->user_id,)
+
+
+            $subadmin  = CompanySubadminsPermissions::find($request->user_id);
+
+            $user = User::where('id', $subadmin->user_id,)
                 ->where('company_id', $companyId)
                 ->where('role', 'company_subadmin')
                 ->firstOrFail();
@@ -178,7 +212,7 @@ class CompanySubAdminController extends Controller
             $user->save();
 
             // Update permissions
-            $permissions = CompanySubadminsPermissions::where('user_id', $user->id)->firstOrFail();
+            $permissions = CompanySubadminsPermissions::find($request->user_id);
             $permissions->update([
                 'address' => $request->address,
                 'phone' => $request->phone,
@@ -192,7 +226,7 @@ class CompanySubAdminController extends Controller
                 'employee_read' => $request->employee_read,
                 'employee_update' => $request->employee_update,
                 'employee_delete' => $request->employee_delete,
-                'assign_product_to_employee' => $request->assign_product_to_employee,
+
                 'updated_at' => now(),
             ]);
 
@@ -224,13 +258,18 @@ class CompanySubAdminController extends Controller
 
             DB::beginTransaction();
 
-            $user = User::where('id', $id)
-                ->where('company_id', $companyId)
-                ->where('role', 'company_subadmin')
-                ->firstOrFail();
 
-            CompanySubadminsPermissions::where('user_id', $user->id)->delete();
+            $data =   CompanySubadminsPermissions::find($id);
+
+
+            $user = User::where('id', $data->user_id)
+                ->where('company_id', $companyId)
+                ->where('role','company_subadmin')
+                ->first();
+
+
             $user->delete();
+            $data->delete();
 
             DB::commit();
 
