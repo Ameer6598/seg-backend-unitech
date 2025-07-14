@@ -114,6 +114,14 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $orderCount = 0;
+        if ($user->role === 'employee') {
+            $orderCount = Order::where('employee_id', $user->employee_id)->count();
+        } elseif ($user->role === 'company') {
+            $orderCount = 0;
+        } elseif ($user->role === 'company_subadmin') {
+            $orderCount = 0;
+        }
         return $this->successResponse(array('model' => 'users'), 'User Login successfully', [
             'access_token' => $token,
             'token_type' => 'Bearer',
@@ -121,8 +129,7 @@ class AuthController extends Controller
             'benefit_amount' => $user->role === 'employee'
                 ? Employee::where('id', $user->employee_id)->value('benefit_amount')
                 : Company::where('id', $user->company_id)->value('benefit_amount'),
-
-            'order_count' => Order::where('employee_id', $user->employee_id)->count(),
+            'order_count' => $orderCount,
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
             'is_pd_missing' => $pdMissing,

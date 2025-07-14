@@ -125,7 +125,7 @@ class OrderController extends Controller
         $pres = new PrecriptionDetails();
         if ($user->role === 'employee') {
             $pres->employee_id = $user->employee_id;
-        } elseif ($user->role === 'company') {
+        } else if (in_array($user->role, ['company', 'company_subadmin'])) {
             $pres->company_id = $user->company_id;
         }
 
@@ -178,12 +178,17 @@ class OrderController extends Controller
             $order->order_by = 'employee'; // 👈 Set by employee
 
         } elseif ($user->role === 'company') {
-
             $order->employee_id = null;
             $order->company_id = $user->company_id;
             $order->order_by = 'company'; // 👈 Set by company
 
+        } elseif ($user->role === 'company_subadmin') {
+            $order->employee_id = null;
+            $order->company_id = $user->company_id;
+            $order->order_by = 'company_subadmin'; // 👈 Set by subadmin
+            $order->subadmin_id = $user->id; // 👈 Save subadmin's ID
         }
+
 
 
         $order->fill($request->only([
@@ -354,7 +359,7 @@ class OrderController extends Controller
                         $this->deleteEmployeeOrderDetails($employeeId);
                         $remainingAmount -= $deductionAmount;
                     }
-                } elseif ($user->role === 'company') {
+                } elseif ($user->role === 'company' || $user->role === 'company_subadmin') {
 
                     $companyId = $user->company_id;
 
@@ -366,13 +371,22 @@ class OrderController extends Controller
                         $company->benefit_amount -= $deductionAmount;
                         $company->save();
 
-                        Transaction::create([
+                        $transactionData = [
                             'company_id' => $companyId,
                             'transaction_type' => 'debit',
                             'amount' => $deductionAmount,
                             'balance' => $company->benefit_amount,
-                            'description' => 'Order payment from benefit',
-                        ]);
+                            'description' => $user->role === 'company_subadmin'
+                                ? 'Order payment by subadmin from company benefit'
+                                : 'Order payment from benefit',
+                        ];
+
+                        // Add subadmin_id if applicable
+                        if ($user->role === 'company_subadmin') {
+                            $transactionData['subadmin_id'] = $user->id;
+                        }
+
+                        Transaction::create($transactionData);
 
                         $this->deleteCompanyOrderDetails($companyId);
                         $remainingAmount -= $deductionAmount;
@@ -482,6 +496,29 @@ class OrderController extends Controller
                         'balance' => $company->balance,
                         'description' => 'Order payment from company balance',
                     ]);
+                } elseif ($user->role === 'company_subadmin') {
+                    $companyId = $user->company_id;
+
+                    $company = Company::findOrFail($companyId);
+                    $deductionAmount = $request->net_total;
+
+                    if ($company->benefit_amount < $deductionAmount) {
+                        $deductionAmount = $company->benefit_amount;
+                    }
+
+                    $company->benefit_amount -= $deductionAmount;
+                    $company->save();
+
+                    $this->deleteCompanyOrderDetails($companyId);
+
+                    Transaction::create([
+                        'company_id' => $companyId,
+                        'subadmin_id' => $user->id, // 👈 Save subadmin's ID
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $company->benefit_amount,
+                        'description' => 'Order payment by subadmin from company balance',
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::error('Benefit Payment Error: ' . $e->getMessage());
@@ -491,17 +528,20 @@ class OrderController extends Controller
 
 
         $role = auth('sanctum')->user()->role;
+        $user = auth('sanctum')->user();
+
 
         if ($role === 'employee') {
             $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
-        $email = $user->email;
-
-
+            $email = $user->email;
         } elseif ($role === 'company') {
             $user = User::where('role', 'company')->where('company_id', $companyId)->first();
-        $email = $user->email;
-
+            $email = $user->email;
+        } elseif ($role === 'company_subadmin') {
+            $user = User::where('role', 'company_subadmin')->where('id', $user->id)->first();
+            $email = $user->email;
         }
+
 
 
         Mail::to($email)->send(new OrderConfirmationMail($order));

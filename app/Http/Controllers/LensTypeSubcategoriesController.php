@@ -323,9 +323,9 @@ class LensTypeSubcategoriesController extends Controller
     public function getAssignedLensTypeSubcategoriesForCompany()
     {
         try {
-            // $companyId = auth('sanctum')->user()->company_id;
+            $companyId = auth('sanctum')->user()->company_id;
 
-            $companyId = 2;
+
 
 
             $assignedSubcategories = CompanyLensTypeSubcategories::where('company_id', $companyId)->get();
