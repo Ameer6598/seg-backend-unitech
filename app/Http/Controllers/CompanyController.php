@@ -419,7 +419,7 @@ class CompanyController extends Controller
             return $this->successResponse(['model' => 'company'], 'Password updated successfully', ['User_id' => $company->id]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->errorResponse(['model' => 'employe'], $e->getMessage(), [], 422);
+            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
         }
     }
 

@@ -96,7 +96,7 @@ class AuthController extends Controller
                 'updated_at' => $user->updated_at,
                 'company_name' => $permission->company_name ?? null,
                 'address' => $permission->address ?? null,
-                'phone' => $permission->phone ?? null,
+                'phone_no' => $permission->phone ?? null,
                 'permissions' => [
                     'assign_benefits_to_employee' => (bool) ($permission->assign_benefits_to_employee ?? false),
                     'frame_read' => (bool) ($permission->frame_read ?? false),

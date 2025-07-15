@@ -1,4 +1,5 @@
 
+
         <?php
 
         use Illuminate\Http\Request;
@@ -22,6 +23,7 @@
         use App\Http\Controllers\LensManegment\AssignScratchCoating;
         use App\Http\Controllers\LensManegment\lensManegmentController;
         use App\Http\Controllers\LensManegment\AssignBlueLightProtection;
+        use App\Http\Controllers\SegAdmincontroller;
 
         Route::get('/users', function () {
             return 'API User route done' . Hash::make('admin');
@@ -65,6 +67,14 @@
 
 
             Route::middleware('role:owner')->group(function () {
+
+
+
+
+                Route::post('create/seg/subadmin', [SegAdmincontroller::class, 'createsubadmin']);
+                Route::post('update/seg/subadmin/{id}', [SegAdmincontroller::class, 'updateSubadmin']);
+                Route::delete('delete/seg/subadmin/{id}', [SegAdmincontroller::class, 'deleteSubadmin']);
+                Route::get('seg/subadmins/{id?}', [SegAdmincontroller::class, 'getSubadmin']);
 
 
                 Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
@@ -172,6 +182,11 @@
                 Route::post('change-company-password', [CompanyController::class, 'companypassword']);
                 Route::post('update-company', [CompanyController::class, 'updatedetails']);
             });
+            Route::middleware('role:company_subadmin')->group(function () {
+                Route::post('change-company_subadmin-password', [CompanySubAdminController::class, 'changepassword']);
+                Route::post('update-company_subadmin', [CompanySubAdminController::class, 'updatedetails']);
+            });
+
             Route::middleware('role:company,company_subadmin,owner')->group(function () {
                 Route::post('employee/update', [EmployeeController::class, 'update']);
             });

@@ -264,7 +264,7 @@ class CompanySubAdminController extends Controller
 
             $user = User::where('id', $data->user_id)
                 ->where('company_id', $companyId)
-                ->where('role','company_subadmin')
+                ->where('role', 'company_subadmin')
                 ->first();
 
 
@@ -288,6 +288,76 @@ class CompanySubAdminController extends Controller
                 ['error' => $e->getMessage()],
                 500
             );
+        }
+    }
+    public function changepassword(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'old_password' => 'required',
+                'new_password' => 'required',
+            ]);
+
+            $UserId = auth('sanctum')->user()->id;
+
+            $company_subadmin = User::where('id', $UserId)->first();
+            if (!$company_subadmin) {
+                return $this->errorResponse(['model' => 'company_subadmin'], 'company_subadmin not found', [], 404);
+            }
+            if (!Hash::check($request->old_password, $company_subadmin->password)) {
+                return $this->errorResponse(['model' => 'company_subadmin'], 'Old password is incorrect', [], 400);
+            }
+            $company_subadmin->password = Hash::make($request->new_password);
+            $company_subadmin->save();
+
+            return $this->successResponse(['model' => 'company_subadmin'], 'Password updated successfully', ['User_id' => $company_subadmin->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'company_subadmin'], $e->getMessage(), [], 422);
+        }
+    }
+    public function updatedetails(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'nullable|string|max:255',
+                'phone' => 'nullable|string|max:20',
+            ]);
+
+            $UserId = auth('sanctum')->user()->id;
+
+            DB::beginTransaction();
+
+            $user = User::findOrFail($UserId);
+            $subadmin = CompanySubadminsPermissions::where('user_id', $UserId)->firstOrFail();
+
+            // Update name only if provided
+            if ($request->filled('name')) {
+                $user->name = $request->name;
+                $user->save();
+            }
+
+            // Update phone only if provided
+            if ($request->filled('phone')) {
+                $subadmin->phone = $request->phone;
+                $subadmin->save();
+            }
+
+            DB::commit();
+
+            // You may return updated user and subadmin data as response
+            $data = [
+                'user' => $user,
+                'subadmin' => $subadmin,
+            ];
+
+            return $this->successResponse(['model' => 'company subadmin'], 'Company subadmin updated successfully', [
+                'company' => $data,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'company subadmin'], $e->getMessage(), [], 422);
         }
     }
 }
