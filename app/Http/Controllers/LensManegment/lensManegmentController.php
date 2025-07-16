@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\LensManegment;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\CompanyLensMaterial;
 use App\Http\Controllers\Controller;
 use App\Models\LensManegment\LensTint;
 use Illuminate\Support\Facades\Validator;
@@ -201,28 +203,35 @@ class lensManegmentController extends Controller
     }
 
 
-    public function delete($id)
-    {
-        $material = LensMaterial::find($id);
+public function delete($id)
+{
+    $material = LensMaterial::find($id);
 
-        if (!$material) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Material not found',
-            ], 404);
-        }
-
-        $imagePath = public_path($material->image_url);
-        if (file_exists($imagePath)) {
-            unlink($imagePath);
-        }
-
-        $material->delete();
+    if (!$material) {
         return response()->json([
-            'status' => true,
-            'message' => 'Material deleted successfully',
-        ]);
+            'status' => false,
+            'message' => 'Material not found',
+        ], 404);
     }
+
+    // Delete related CompanyLensMaterial records
+    CompanyLensMaterial::where('lens_material_id', $id)->delete();
+
+    // Delete image file
+    $imagePath = public_path($material->image_url);
+    if (file_exists($imagePath)) {
+        unlink($imagePath);
+    }
+
+    // Delete the material
+    $material->delete();
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Material and related records deleted successfully',
+    ]);
+}
+
 
 
     public function getScratchCoating($id = null)

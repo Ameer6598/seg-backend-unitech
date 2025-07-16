@@ -26,7 +26,7 @@ class SegAdmincontroller extends Controller
                 'email' => 'required|email|unique:seg_subadmin,email|unique:users,email',
                 'phone' => 'required|string|max:20',
                 'address' => 'required|string|max:255',
-                'password' => 'required|string|min:6|confirmed',
+                'password' => 'required|string',
             ];
 
             // Add 0 or 1 validation for each permission field
@@ -35,6 +35,7 @@ class SegAdmincontroller extends Controller
                 'frame_read',
                 'frame_update',
                 'frame_delete',
+                'frame_assign',
                 'category_create',
                 'category_read',
                 'category_update',
@@ -142,6 +143,7 @@ class SegAdmincontroller extends Controller
                 'frame_read',
                 'frame_update',
                 'frame_delete',
+                'frame_assign',
                 'category_create',
                 'category_read',
                 'category_update',
@@ -236,14 +238,23 @@ class SegAdmincontroller extends Controller
 
     public function updateSubadmin(Request $request, $id)
     {
+
         try {
+
+          $user = User::where('role', 'seg_subadmin')->where('seg_subadmin_id', $id)->firstOrFail();
+
+            $subadminId = $user->id;
+            $userId = $user->seg_subadmin_id;
+            
+
             $rules = [
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:seg_subadmin,email,' . $id . '|unique:users,email,' . $id,
+                'email' => 'required|email|unique:seg_subadmin,email,' . $userId . '|unique:users,email,' . $subadminId,
+
                 'phone' => 'required|string|max:20',
                 'address' => 'required|string|max:255',
                 'status' => 'required|in:0,1',
-                'password' => 'nullable|string|min:6|confirmed',
+                'password' => 'nullable|string',
             ];
 
             // Add 0 or 1 validation for each permission field
@@ -252,7 +263,8 @@ class SegAdmincontroller extends Controller
                 'frame_read',
                 'frame_update',
                 'frame_delete',
-                'category_create',
+                'frame_assign' ,
+                    'category_create',
                 'category_read',
                 'category_update',
                 'category_delete',
@@ -413,27 +425,156 @@ class SegAdmincontroller extends Controller
             return $this->errorResponse(['model' => 'Subadmin'], $e->getMessage(), [], 422);
         }
     }
-    public function getSubadmin(Request $request, $id = null)
+    public function getSubadmin(Request $request)
     {
         try {
-            if ($id) {
-                // Get single subadmin
-                $segSubadmin = SegSubadmin::with(['user', 'permissions'])->findOrFail($id);
-
-                return $this->successResponse(
-                    ['model' => 'Subadmin'],
-                    'Subadmin retrieved successfully',
-                    ['subadmin' => $segSubadmin]
-                );
-            }
-
-            // Get all subadmins
+            // Fetch subadmins with related user and permissions
             $segSubadmins = SegSubadmin::with(['user', 'permissions'])->get();
+
+            // Transform the data to match the desired format
+            $transformedSubadmins = $segSubadmins->map(function ($subadmin) {
+                // Transform user status (0/1 to false/true)
+                $user = $subadmin->user->toArray();
+                $user['status'] = (bool) $user['status'];
+
+                // Transform permissions
+                $permissions = $subadmin->permissions->toArray();
+                $transformedPermissions = [
+                    'id' => $permissions['id'],
+                    'subadmin_id' => $permissions['subadmin_id'],
+                    'product_management' => [
+                        'frame' => [
+                            'create' => (bool) $permissions['frame_create'],
+                            'read' => (bool) $permissions['frame_read'],
+                            'update' => (bool) $permissions['frame_update'],
+                            'delete' => (bool) $permissions['frame_delete'],
+                            'assign' => (bool) $permissions['frame_assign'],
+                        ],
+                        'category' => [
+                            'create' => (bool) $permissions['category_create'],
+                            'read' => (bool) $permissions['category_read'],
+                            'update' => (bool) $permissions['category_update'],
+                            'delete' => (bool) $permissions['category_delete'],
+                        ],
+                        'frame_size' => [
+                            'create' => (bool) $permissions['frame_size_create'],
+                            'read' => (bool) $permissions['frame_size_read'],
+                            'update' => (bool) $permissions['frame_size_update'],
+                            'delete' => (bool) $permissions['frame_size_delete'],
+                        ],
+                        'rim_type' => [
+                            'create' => (bool) $permissions['rim_type_create'],
+                            'read' => (bool) $permissions['rim_type_read'],
+                            'update' => (bool) $permissions['rim_type_update'],
+                            'delete' => (bool) $permissions['rim_type_delete'],
+                        ],
+                        'styles' => [
+                            'create' => (bool) $permissions['styles_create'],
+                            'read' => (bool) $permissions['styles_read'],
+                            'update' => (bool) $permissions['styles_update'],
+                            'delete' => (bool) $permissions['styles_delete'],
+                        ],
+                        'material' => [
+                            'create' => (bool) $permissions['material_create'],
+                            'read' => (bool) $permissions['material_read'],
+                            'update' => (bool) $permissions['material_update'],
+                            'delete' => (bool) $permissions['material_delete'],
+                        ],
+                        'shapes' => [
+                            'create' => (bool) $permissions['shapes_create'],
+                            'read' => (bool) $permissions['shapes_read'],
+                            'update' => (bool) $permissions['shapes_update'],
+                            'delete' => (bool) $permissions['shapes_delete'],
+                        ],
+                        'manufacture' => [
+                            'create' => (bool) $permissions['manufacture_create'],
+                            'read' => (bool) $permissions['manufacture_read'],
+                            'update' => (bool) $permissions['manufacture_update'],
+                            'delete' => (bool) $permissions['manufacture_delete'],
+                        ],
+                    ],
+                    'lens_management' => [
+                        'lens_material' => [
+                            'create' => (bool) $permissions['lens_material_create'],
+                            'read' => (bool) $permissions['lens_material_read'],
+                            'update' => (bool) $permissions['lens_material_update'],
+                            'delete' => (bool) $permissions['lens_material_delete'],
+                            'assign' => (bool) $permissions['lens_material_assign'],
+                        ],
+                        'scratch_coating' => [
+                            'create' => (bool) $permissions['scratch_coating_create'],
+                            'read' => (bool) $permissions['scratch_coating_read'],
+                            'update' => (bool) $permissions['scratch_coating_update'],
+                            'delete' => (bool) $permissions['scratch_coating_delete'],
+                            'assign' => (bool) $permissions['scratch_coating_assign'],
+                        ],
+                        'lens_tint' => [
+                            'create' => (bool) $permissions['lens_tint_create'],
+                            'read' => (bool) $permissions['lens_tint_read'],
+                            'update' => (bool) $permissions['lens_tint_update'],
+                            'delete' => (bool) $permissions['lens_tint_delete'],
+                            'assign' => (bool) $permissions['lens_tint_assign'],
+                        ],
+                        'lens_protection' => [
+                            'create' => (bool) $permissions['lens_protection_create'],
+                            'read' => (bool) $permissions['lens_protection_read'],
+                            'update' => (bool) $permissions['lens_protection_update'],
+                            'delete' => (bool) $permissions['lens_protection_delete'],
+                            'assign' => (bool) $permissions['lens_protection_assign'],
+                        ],
+                        'blue_light_protection' => [
+                            'create' => (bool) $permissions['blue_light_protection_create'],
+                            'read' => (bool) $permissions['blue_light_protection_read'],
+                            'update' => (bool) $permissions['blue_light_protection_update'],
+                            'delete' => (bool) $permissions['blue_light_protection_delete'],
+                            'assign' => (bool) $permissions['blue_light_protection_assign'],
+                        ],
+                    ],
+                    'lens_type_management' => [
+                        'lens_type_category' => [
+                            'create' => (bool) $permissions['lens_type_category_create'],
+                            'read' => (bool) $permissions['lens_type_category_read'],
+                            'update' => (bool) $permissions['lens_type_category_update'],
+                            'delete' => (bool) $permissions['lens_type_category_delete'],
+                        ],
+                        'lens_type_sub_category' => [
+                            'create' => (bool) $permissions['lens_type_sub_category_create'],
+                            'read' => (bool) $permissions['lens_type_sub_category_read'],
+                            'update' => (bool) $permissions['lens_type_sub_category_update'],
+                            'delete' => (bool) $permissions['lens_type_sub_category_delete'],
+                            'assign' => (bool) $permissions['lens_type_sub_category_assign'],
+                        ],
+                    ],
+                    'order_management' => [
+                        'view_order_history' => (bool) $permissions['view_order_history'],
+                        'update_order' => (bool) $permissions['update_order'],
+                    ],
+                    'company_management' => [
+                        'create' => (bool) $permissions['company_create'],
+                        'read' => (bool) $permissions['company_read'],
+                        'update' => (bool) $permissions['company_update'],
+                        'impersonate' => (bool) $permissions['company_impersinate'],
+                    ],
+                    'employee_management' => [
+                        'read' => (bool) $permissions['employee_read'],
+                        'update' => (bool) $permissions['employee_update'],
+                        'impersonate' => (bool) $permissions['employee_impersinate'],
+                    ],
+                    'created_at' => $permissions['created_at'],
+                    'updated_at' => $permissions['updated_at'],
+                ];
+
+                // Combine transformed data
+                return array_merge($subadmin->toArray(), [
+                    'user' => $user,
+                    'permissions' => $transformedPermissions,
+                ]);
+            });
 
             return $this->successResponse(
                 ['model' => 'Subadmin'],
                 'Subadmins retrieved successfully',
-                ['subadmins' => $segSubadmins]
+                ['subadmins' => $transformedSubadmins]
             );
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'Subadmin'], $e->getMessage(), [], 422);

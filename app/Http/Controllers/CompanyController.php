@@ -34,7 +34,7 @@ class CompanyController extends Controller
                 'email' => 'required|email|unique:users,email',
                 'phone' => 'required|unique:companies,phone', // Checks uniqueness in companies table
                 'password' => 'required|string|min:6',
-                'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
+                'company_logo' => 'nullable|image|max:5120', // Max 5MB
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
             ]);
@@ -99,7 +99,7 @@ class CompanyController extends Controller
                 'email' => 'required|email',
                 'company_id' => 'required',
                 'status' => 'required|in:0,1', // Correct syntax for in rule
-                'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'company_logo' => 'nullable|image|max:5120',
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
 

@@ -27,6 +27,7 @@ class User extends Authenticatable
         'verification_number',
         'employee_id',
         'status',
+        'seg_subadmin_id',
     ];
 
     /**

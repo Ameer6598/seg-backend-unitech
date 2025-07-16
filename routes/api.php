@@ -74,7 +74,7 @@
                 Route::post('create/seg/subadmin', [SegAdmincontroller::class, 'createsubadmin']);
                 Route::post('update/seg/subadmin/{id}', [SegAdmincontroller::class, 'updateSubadmin']);
                 Route::delete('delete/seg/subadmin/{id}', [SegAdmincontroller::class, 'deleteSubadmin']);
-                Route::get('seg/subadmins/{id?}', [SegAdmincontroller::class, 'getSubadmin']);
+                Route::get('seg/subadmins', [SegAdmincontroller::class, 'getSubadmin']);
 
 
                 Route::post('impersonate/company/{id}', [ImpersonationController::class, 'impersonatecompany']);
@@ -200,9 +200,6 @@
 
             Route::middleware('role:employee')->group(function () {
                 Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
-
-
-
 
                 // Route::post('create-order', [OrderController::class, 'storeOrder']);
 
