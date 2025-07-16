@@ -56,7 +56,7 @@
             });
             Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
 
-            Route::middleware('role:owner,company,company_subadmin')->group(function () {
+            Route::middleware('role:owner,seg_subadmin,company_subadmin,company,company_subadmin')->group(function () {
                 Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
             });
 
@@ -66,7 +66,7 @@
             Route::post('check-validation', [AuthController::class, 'validateToken']);
 
 
-            Route::middleware('role:owner')->group(function () {
+            Route::middleware('role:owner,seg_subadmin,company_subadmin')->group(function () {
 
 
 
@@ -187,7 +187,7 @@
                 Route::post('update-company_subadmin', [CompanySubAdminController::class, 'updatedetails']);
             });
 
-            Route::middleware('role:company,company_subadmin,owner')->group(function () {
+            Route::middleware('role:company,company_subadmin,owner,seg_subadmin')->group(function () {
                 Route::post('employee/update', [EmployeeController::class, 'update']);
             });
             Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
@@ -219,7 +219,7 @@
             });
 
 
-            Route::middleware('role:owner,company,company_subadmin')->group(function () {
+            Route::middleware('role:owner,company,seg_subadmin')->group(function () {
                 // Categories
                 Route::post('/categories', [ProductController::class, 'createCategory']);
                 Route::get('/categories', [ProductController::class, 'getCategories']);
@@ -279,7 +279,7 @@
             });
 
             // routes for lense manegment
-            Route::middleware('role:owner')->group(function () {
+            Route::middleware('role:owner,seg_subadmin')->group(function () {
                 //lense lens material
                 Route::get('lens-materials', [lensManegmentController::class, 'get']); // all
                 Route::get('lens-materials/{id}', [lensManegmentController::class, 'get']); // single

@@ -161,6 +161,7 @@ class LensTypeSubcategoriesController extends Controller
             if ($subCategory->image_url && file_exists(public_path('projectimages/' . $subCategory->image_url))) {
                 unlink(public_path('projectimages/' . $subCategory->image_url));
             }
+            CompanyLensTypeSubcategories::where('sub_cate_id', $id)->delete();
 
             $subCategory->delete();
 

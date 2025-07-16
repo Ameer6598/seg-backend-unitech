@@ -6,7 +6,9 @@ use App\Traits\ApiResponse;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\LensTypeCategories;
+use App\Models\LensTypeSubcategories;
 use Illuminate\Support\Facades\Storage;
+use App\Models\CompanyLensTypeSubcategories;
 
 class LenseTypeController extends Controller
 {
@@ -168,11 +170,28 @@ class LenseTypeController extends Controller
                 }
             }
 
+            // Get all related subcategories
+            $subCategories = LensTypeSubcategories::where('category_id', $id)->get();
+
+            foreach ($subCategories as $subCategory) {
+                // Delete subcategory image if exists
+                if ($subCategory->image_url && file_exists(public_path('projectimages/' . $subCategory->image_url))) {
+                    unlink(public_path('projectimages/' . $subCategory->image_url));
+                }
+
+                // Delete assigned companies for this subcategory
+                CompanyLensTypeSubcategories::where('sub_cate_id', $subCategory->id)->delete();
+
+                // Delete subcategory
+                $subCategory->delete();
+            }
+
+            // Finally delete the category
             $lensType->delete();
 
             return $this->successResponse(
                 ['model' => 'Lens Type Category'],
-                'Lens Type Category deleted successfully',
+                'Lens Type Category and its subcategories (along with company assignments) deleted successfully.',
                 null,
                 200
             );

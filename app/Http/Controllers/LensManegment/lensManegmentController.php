@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\LensManegment;
 
 use Illuminate\Http\Request;
+use App\Models\Companylenstint;
 use Illuminate\Support\Facades\DB;
 use App\Models\CompanyLensMaterial;
 use App\Http\Controllers\Controller;
+use App\Models\CompanyLensProtection;
+use App\Models\CompanyScratchCoatings;
 use App\Models\LensManegment\LensTint;
 use Illuminate\Support\Facades\Validator;
+use App\Models\CompanyBlueLightProtection;
 use App\Models\LensManegment\LensMaterial;
 use App\Models\LensManegment\LensProtection;
 use App\Models\LensManegment\ScracthCoating;
@@ -390,6 +394,11 @@ public function delete($id)
             ], 404);
         }
 
+
+
+            CompanyScratchCoatings::where('scratch_coating_id', $id)
+                ->delete();
+
         $imagePath = public_path($coating->image_url);
         if (file_exists($imagePath)) {
             unlink($imagePath);
@@ -560,6 +569,12 @@ public function delete($id)
             ], 404);
         }
 
+          // Delete the specified mappings
+        Companylenstint::where('lens_tint_id', $id)
+            ->delete();
+
+
+
         $imagePath = public_path($tint->image_url);
         if (file_exists($imagePath)) {
             unlink($imagePath);
@@ -727,6 +742,12 @@ public function delete($id)
                 'message' => 'Lens protection not found',
             ], 404);
         }
+
+
+          // Delete the specified mappings
+        CompanyLensProtection::where('lens_protection_id', $id)
+            ->delete();
+
 
         $imagePath = public_path($protection->image_url);
         if (file_exists($imagePath)) {
@@ -896,6 +917,13 @@ public function delete($id)
                 'message' => 'Blue light protection not found',
             ], 404);
         }
+
+
+        
+            // Delete the specified mappings
+            CompanyBlueLightProtection::where('blue_light_protection_id', $id)
+                ->delete();
+
 
         $imagePath = public_path($protection->image_url);
         if (file_exists($imagePath)) {

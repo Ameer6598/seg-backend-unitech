@@ -6,10 +6,11 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\SegSubadmin;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Str;
-use Illuminate\Http\Request;
 
+use Illuminate\Http\Request;
 use App\Mail\ForgotPasswordMail;
 use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
@@ -110,6 +111,30 @@ class AuthController extends Controller
                     'employee_delete' => (bool) ($permission->employee_delete ?? false),
 
                 ],
+            ];
+        } else if ($user->role === 'seg_subadmin') {
+            $Segadmin = SegSubadmin::where('id', $user->seg_subadmin_id)->with('permissions')->first();
+
+            $permissions = $Segadmin->permissions?->toArray() ?? [];
+            $filteredPermissions = [];
+
+            foreach ($permissions as $key => $value) {
+                if (!in_array($key, ['id', 'subadmin_id', 'created_at', 'updated_at'])) {
+                    $filteredPermissions[$key] = (bool) $value;
+                }
+            }
+
+
+
+
+            $filteredUserData = [
+                'id' => $Segadmin->id,
+                'username' => $Segadmin->name,
+                'email' => $Segadmin->email,
+                'phone' => $Segadmin->phone,
+                'address' => $Segadmin->address,
+                'permissions' => $filteredPermissions,
+
             ];
         }
 
