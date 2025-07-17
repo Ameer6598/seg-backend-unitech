@@ -323,11 +323,11 @@ class OrderController extends Controller
                     'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
                 ]);
 
-                // Send email using Laravel
 
 
 
-                return response()->json(['message' => 'Invoice created and email sent.']);
+
+
             } catch (\Exception $e) {
                 Log::error('Stripe Invoice Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
@@ -438,7 +438,7 @@ class OrderController extends Controller
 
                     } catch (\Exception $e) {
                         Log::error('Stripe Partial Invoice Error: ' . $e->getMessage());
-                        // Optionally return or throw error
+                    
                     }
                 }
             } catch (\Exception $e) {
