@@ -36,12 +36,15 @@
 
         Route::post('set/newpassword', [AuthController::class, 'set']);
 
+        Route::get('updateStripeOrderStatuses', [OrderController::class, 'updateStripeOrderStatuses']);
+
+
         Route::post('forget/password', [AuthController::class, 'forgetpassword']);
 
         Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
         Route::post('/check-payment-status', [StripeController::class, 'checkPaymentStatus']);
 
-        Route::get('/pay-later-orders', [OrderController::class, 'getPayLaterOrders']);
+
         Route::get('get/company/list', [OrderController::class, 'companylist']);
 
 

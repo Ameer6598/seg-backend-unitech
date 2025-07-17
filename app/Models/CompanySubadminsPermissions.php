@@ -20,6 +20,7 @@ class CompanySubadminsPermissions extends Model
         'employee_read',
         'employee_update',
         'employee_delete',
+        'employee_impersinate',
 
         'assign_benefits_to_employee',
     ];
@@ -69,7 +70,10 @@ class CompanySubadminsPermissions extends Model
         return (bool) $this->attributes['employee_delete'];
     }
 
-
+  public function getEmployeeImpersinateAttribute($value)
+    {
+        return (bool) $this->attributes['employee_impersinate'];
+    }
 
         public function getAssignBenefitsToEmployeeAttribute($value)
     {

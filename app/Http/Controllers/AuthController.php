@@ -109,6 +109,7 @@ class AuthController extends Controller
                     'employee_read' => (bool) ($permission->employee_read ?? false),
                     'employee_update' => (bool) ($permission->employee_update ?? false),
                     'employee_delete' => (bool) ($permission->employee_delete ?? false),
+                    'employee_impersinate' => (bool) ($permission->employee_impersinate ?? false),
 
                 ],
             ];
@@ -129,9 +130,9 @@ class AuthController extends Controller
 
             $filteredUserData = [
                 'id' => $Segadmin->id,
-                'username' => $Segadmin->name,
+                'name' => $Segadmin->name,
                 'email' => $Segadmin->email,
-                'phone' => $Segadmin->phone,
+                'phone_no' => $Segadmin->phone,
                 'address' => $Segadmin->address,
                 'permissions' => $filteredPermissions,
 
@@ -230,9 +231,11 @@ class AuthController extends Controller
             $user->save();
 
             DB::commit();
-
             // Generate password reset link
-            $resetLink = "https://app.safetyeyeguard.com/new-password/{$user->id}/{$user->verification_number}";
+            $baseUrl = env('FRONTEND_BASE_URL');
+            $resetLink = "{$baseUrl}/new-password/{$user->id}/{$user->verification_number}";
+
+
 
             // Send mail
             Mail::to($user->email)->send(new ForgotPasswordMail($user->name, $resetLink));

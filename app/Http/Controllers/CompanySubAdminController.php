@@ -38,6 +38,7 @@ class CompanySubAdminController extends Controller
                 'employee_read' => 'required|in:0,1',
                 'employee_update' => 'required|in:0,1',
                 'employee_delete' => 'required|in:0,1',
+                'employee_impersinate'=>'required|in:0,1'
 
             ]);
 
@@ -80,6 +81,8 @@ class CompanySubAdminController extends Controller
                 'employee_read' => $request->employee_read,
                 'employee_update' => $request->employee_update,
                 'employee_delete' => $request->employee_delete,
+                'employee_impersinate' => $request->employee_impersinate,
+
 
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -100,8 +103,8 @@ class CompanySubAdminController extends Controller
 
             return $this->errorResponse(
                 null,
-                'Failed to create subadmin',
-                ['error' => $e->getMessage()],
+                $e->getMessage(),
+                ['error' => 'failed to create admin'],
                 500
             );
         }
@@ -147,6 +150,8 @@ class CompanySubAdminController extends Controller
                         'employee_read' => (bool) ($permission->employee_read ?? false),
                         'employee_update' => (bool) ($permission->employee_update ?? false),
                         'employee_delete' => (bool) ($permission->employee_delete ?? false),
+                        'employee_impersinate' => (bool) ($permission->employee_impersinate ?? false),
+
 
                     ],
                 ];
@@ -175,8 +180,6 @@ class CompanySubAdminController extends Controller
                 'address' => 'required|string',
                 'phone' => 'required',
                 'status' => 'required|in:0,1', // ✅ Added validation for status
-
-
                 'assign_benefits_to_employee' => 'required|in:0,1',
                 'frame_read' => 'required|in:0,1',
                 'frame_assign' => 'required|in:0,1',
@@ -187,6 +190,8 @@ class CompanySubAdminController extends Controller
                 'employee_read' => 'required|in:0,1',
                 'employee_update' => 'required|in:0,1',
                 'employee_delete' => 'required|in:0,1',
+                'employee_impersinate' => 'required|in:0,1',
+
             ]);
 
             $companyId = auth('sanctum')->user()->company_id;
@@ -226,6 +231,8 @@ class CompanySubAdminController extends Controller
                 'employee_read' => $request->employee_read,
                 'employee_update' => $request->employee_update,
                 'employee_delete' => $request->employee_delete,
+                'employee_impersinate' => $request->employee_impersinate,
+
 
                 'updated_at' => now(),
             ]);

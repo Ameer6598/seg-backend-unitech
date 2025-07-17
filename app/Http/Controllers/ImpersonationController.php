@@ -66,7 +66,7 @@ class ImpersonationController extends Controller
             'benefit_amount' => $user->role === 'employee'
                 ? Employee::where('id', $user->employee_id)->value('benefit_amount')
                 : Company::where('id', $user->company_id)->value('benefit_amount'),
-            'order_count' => Order::where('employee_id', $user->employee_id)->count(),
+            'order_count' => 0,
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
         ]);
