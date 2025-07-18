@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Mail\ForgotPasswordMail;
 use App\Models\PrecriptionDetails;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -237,8 +238,16 @@ class AuthController extends Controller
 
 
 
-            // Send mail
-            Mail::to($user->email)->send(new ForgotPasswordMail($user->name, $resetLink));
+
+
+            try {
+
+                Mail::to($user->email)->send(new ForgotPasswordMail($user->name, $resetLink));
+
+                Log::info("Forget password mail sent successfully for User: {$user->name}");
+            } catch (\Exception $e) {
+                Log::error("Failed to send invoice mail for password reset for User: {$user->name}. Error: " . $e->getMessage());
+            }
 
             return $this->successResponse(['model' => 'user'], 'Reset link sent successfully.', [], 200);
         } catch (\Exception $e) {

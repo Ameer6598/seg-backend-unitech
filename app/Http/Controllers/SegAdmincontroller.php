@@ -241,11 +241,11 @@ class SegAdmincontroller extends Controller
 
         try {
 
-          $user = User::where('role', 'seg_subadmin')->where('seg_subadmin_id', $id)->firstOrFail();
+            $user = User::where('role', 'seg_subadmin')->where('seg_subadmin_id', $id)->firstOrFail();
 
             $subadminId = $user->id;
             $userId = $user->seg_subadmin_id;
-            
+
 
             $rules = [
                 'name' => 'required|string|max:255',
@@ -263,8 +263,8 @@ class SegAdmincontroller extends Controller
                 'frame_read',
                 'frame_update',
                 'frame_delete',
-                'frame_assign' ,
-                    'category_create',
+                'frame_assign',
+                'category_create',
                 'category_read',
                 'category_update',
                 'category_delete',
@@ -578,6 +578,79 @@ class SegAdmincontroller extends Controller
             );
         } catch (\Exception $e) {
             return $this->errorResponse(['model' => 'Subadmin'], $e->getMessage(), [], 422);
+        }
+    }
+
+    public function changepassword(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'old_password' => 'required',
+                'new_password' => 'required',
+            ]);
+
+            $UserId = auth('sanctum')->user()->id;
+
+            $seg_subadmin = User::where('id', $UserId)->first();
+            if (!$seg_subadmin) {
+                return $this->errorResponse(['model' => 'seg_subadmin'], 'seg_subadmin not found', [], 404);
+            }
+            if (!Hash::check($request->old_password, $seg_subadmin->password)) {
+                return $this->errorResponse(['model' => 'seg_subadmin'], 'Old password is incorrect', [], 400);
+            }
+            $seg_subadmin->password = Hash::make($request->new_password);
+            $seg_subadmin->save();
+
+            return $this->successResponse(['model' => 'seg_subadmin'], 'Password updated successfully', ['User_id' => $seg_subadmin->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'seg_subadmin'], $e->getMessage(), [], 422);
+        }
+    }
+    public function updatedetails(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'nullable|string|max:255',
+                'phone' => 'nullable|string|max:20',
+            ]);
+
+            $UserId = auth('sanctum')->user()->id;
+
+            DB::beginTransaction();
+
+            $user = User::findOrFail($UserId);
+            $subadmin = SegSubadmin::findOrFail($user->seg_subadmin_id);
+
+            if ($request->filled('name')) {
+                $user->name = $request->name;
+                $subadmin->name = $request->name;
+            }
+
+            if ($request->filled('phone')) {
+                $subadmin->phone = $request->phone;
+            }
+
+            // Save changes after all assignments
+            $user->save();
+            $subadmin->save();
+
+
+            DB::commit();
+
+            // You may return updated user and subadmin data as response
+            $data = [
+                'user' => $user,
+                'subadmin' => $subadmin,
+            ];
+
+            return $this->successResponse(['model' => 'Seg subadmin'], 'Seg subadmin updated successfully', [
+                'Seg' => $data,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse(['model' => 'Seg'], $e->getMessage(), [], 422);
         }
     }
 }

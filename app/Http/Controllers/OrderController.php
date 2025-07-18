@@ -322,12 +322,7 @@ class OrderController extends Controller
                     'stripe_invoice_id' => $finalInvoice->id,
                     'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
                 ]);
-
-
-
-
-
-
+                $this->deleteEmployeeOrderDetails($employeeId);
             } catch (\Exception $e) {
                 Log::error('Stripe Invoice Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
@@ -376,9 +371,7 @@ class OrderController extends Controller
                             'transaction_type' => 'debit',
                             'amount' => $deductionAmount,
                             'balance' => $company->benefit_amount,
-                            'description' => $user->role === 'company_subadmin'
-                                ? 'Order payment by subadmin from company benefit'
-                                : 'Order payment from benefit',
+                            'description' => 'order place on belhaf of benefits amount and pay later'
                         ];
 
                         // Add subadmin_id if applicable
@@ -434,7 +427,6 @@ class OrderController extends Controller
                             'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
                         ]);
 
-                        // Send custom email via Laravel
 
                     } catch (\Exception $e) {
                         Log::error('Stripe Partial Invoice Error: ' . $e->getMessage());
@@ -546,8 +538,7 @@ class OrderController extends Controller
         Mail::to($email)->send(new OrderConfirmationMail($order));
         try {
             Mail::to($request->billing_email)->send(new InoviceMail($order->id));
-
-            // Log::info("Invoice mail sent successfully for Order ID: {$order->id}");
+            
         } catch (\Exception $e) {
             Log::error("Failed to send invoice mail for Order ID: {$order->id}. Error: " . $e->getMessage());
         }
@@ -666,7 +657,7 @@ class OrderController extends Controller
             $order->payment_status = 'Unpaid';
         } else if ($order->payment_method === 'Benefit Amount + Credit Card') {
             $order->payment_status = 'Paid';
-        } else if ($order->payment_method === 'Credit Card') {
+        } else if ($order->payment_method === 'Credit Card') {
             $order->payment_status = 'Paid';
         } else if ($order->payment_method === 'Benefit Amount') {
             $order->payment_status = 'Paid';
@@ -736,19 +727,16 @@ class OrderController extends Controller
 
 
         if ($request->payment_method === 'Online Payment') {
-            try {
+             try {
                 Stripe::setApiKey(config('services.stripe.secret'));
 
-                $remainingAmount = $request->net_total;
-
-                if ($remainingAmount <= 0) {
+                if ($request->net_total <= 0) {
                     throw new \Exception("Invoice amount must be greater than $0.00");
                 }
 
-                // Create Stripe Customer
                 $customer = Customer::create([
                     'email' => $request->billing_email,
-                    'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
+                    'name'  => "{$request->billing_first_name} {$request->billing_last_name}",
                     'phone' => $request->billing_phone_number,
                     'address' => [
                         'line1' => $request->billing_address,
@@ -760,7 +748,6 @@ class OrderController extends Controller
                     ],
                 ]);
 
-                // Create Invoice with Payment Link
                 $invoice = Invoice::create([
                     'customer' => $customer->id,
                     'collection_method' => 'send_invoice',
@@ -769,23 +756,21 @@ class OrderController extends Controller
                     'description' => 'Order #' . $request->order_id,
                 ]);
 
-                // Add invoice items
                 InvoiceItem::create([
                     'customer' => $customer->id,
-                    'amount' => $remainingAmount * 100, // Amount in cents
+                    'amount' => $request->net_total * 100,
                     'currency' => 'usd',
                     'description' => 'Order Payment',
                     'invoice' => $invoice->id,
                 ]);
 
-                // Finalize and send the invoice
-                $finalizedInvoice = Invoice::retrieve($invoice->id);
-                $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
-                $sentInvoice = $finalizedInvoice->sendInvoice();
+                $finalInvoice = Invoice::retrieve($invoice->id)->finalizeInvoice();
 
-                $order->stripe_invoice_id = $sentInvoice->id;
-                $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
-                $order->save();
+                $order->update([
+                    'stripe_invoice_id' => $finalInvoice->id,
+                    'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
+                ]);
+
             } catch (\Exception $e) {
                 Log::error('Stripe Invoice Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
@@ -795,75 +780,74 @@ class OrderController extends Controller
         elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
             try {
                 $employee = Employee::findOrFail($employeeId);
-                $remainingAmount = $request->net_total;
-                $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+                    $remainingAmount = $request->net_total;
+                    $deductionAmount = min($employee->benefit_amount, $remainingAmount);
 
-                // Deduct from employee benefit
-                if ($deductionAmount > 0) {
-                    $employee->benefit_amount -= $deductionAmount;
-                    $employee->save();
+                    // Deduct from employee benefit
+                    if ($deductionAmount > 0) {
+                        $employee->benefit_amount -= $deductionAmount;
+                        $employee->save();
 
-                    Transaction::create([
-                        'employee_id' => $employeeId,
-                        'transaction_type' => 'debit',
-                        'amount' => $deductionAmount,
-                        'balance' => $employee->benefit_amount,
-                        'description' => 'Order payment from benefit',
-                    ]);
+                        Transaction::create([
+                            'employee_id' => $employeeId,
+                            'transaction_type' => 'debit',
+                            'amount' => $deductionAmount,
+                            'balance' => $employee->benefit_amount,
+                            'description' => 'Order payment from benefit',
+                        ]);
 
-                    $this->deleteEmployeeOrderDetails($employeeId);
-                    $remainingAmount -= $deductionAmount;
-                }
+                        $this->deleteEmployeeOrderDetails($employeeId);
+                        $remainingAmount -= $deductionAmount;
+                    }
+                
 
                 // Process remaining amount via Stripe if any
                 if ($remainingAmount > 0) {
-                    Stripe::setApiKey(config('services.stripe.secret'));
+                    try {
+                        Stripe::setApiKey(config('services.stripe.secret'));
 
-                    if ($remainingAmount <= 0) {
-                        throw new \Exception("Invoice amount must be greater than $0.00");
+                        $customer = Customer::create([
+                            'email' => $request->billing_email,
+                            'name'  => "{$request->billing_first_name} {$request->billing_last_name}",
+                            'phone' => $request->billing_phone_number,
+                            'address' => [
+                                'line1' => $request->billing_address,
+                                'line2' => $request->billing_second_address ?? '',
+                                'city' => $request->billing_city,
+                                'state' => $request->billing_state,
+                                'country' => $request->billing_country,
+                                'postal_code' => $request->billing_zip_postal_code,
+                            ],
+                        ]);
+
+                        $invoice = Invoice::create([
+                            'customer' => $customer->id,
+                            'collection_method' => 'send_invoice',
+                            'days_until_due' => 30,
+                            'auto_advance' => true,
+                            'description' => 'Order #' . $request->order_id . ' (Partial Benefit Payment)',
+                        ]);
+
+                        InvoiceItem::create([
+                            'customer' => $customer->id,
+                            'amount' => $remainingAmount * 100,
+                            'currency' => 'usd',
+                            'description' => 'Remaining Order Payment',
+                            'invoice' => $invoice->id,
+                        ]);
+
+                        $finalInvoice = Invoice::retrieve($invoice->id)->finalizeInvoice();
+
+                        $order->update([
+                            'stripe_invoice_id' => $finalInvoice->id,
+                            'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
+                        ]);
+
+
+                    } catch (\Exception $e) {
+                        Log::error('Stripe Partial Invoice Error: ' . $e->getMessage());
+                    
                     }
-
-                    // Create Stripe Customer
-                    $customer = Customer::create([
-                        'email' => $request->billing_email,
-                        'name'  => $request->billing_first_name . ' ' . $request->billing_last_name,
-                        'phone' => $request->billing_phone_number,
-                        'address' => [
-                            'line1' => $request->billing_address,
-                            'line2' => $request->billing_second_address ?? '',
-                            'city' => $request->billing_city,
-                            'state' => $request->billing_state,
-                            'country' => $request->billing_country,
-                            'postal_code' => $request->billing_zip_postal_code,
-                        ],
-                    ]);
-
-                    // Create Invoice with Payment Link
-                    $invoice = Invoice::create([
-                        'customer' => $customer->id,
-                        'collection_method' => 'send_invoice',
-                        'days_until_due' => 30,
-                        'auto_advance' => true,
-                        'description' => 'Order #' . $request->order_id . ' (Partial Benefit Payment)',
-                    ]);
-
-                    // Add invoice items
-                    InvoiceItem::create([
-                        'customer' => $customer->id,
-                        'amount' => $remainingAmount * 100, // Amount in cents
-                        'currency' => 'usd',
-                        'description' => 'Remaining Order Payment',
-                        'invoice' => $invoice->id,
-                    ]);
-
-                    // Finalize and send the invoice
-                    $finalizedInvoice = Invoice::retrieve($invoice->id);
-                    $finalizedInvoice = $finalizedInvoice->finalizeInvoice();
-                    $sentInvoice = $finalizedInvoice->sendInvoice();
-
-                    $order->stripe_invoice_id = $sentInvoice->id;
-                    $order->stripe_invoice_url = $sentInvoice->hosted_invoice_url;
-                    $order->save();
                 }
             } catch (\Exception $e) {
                 Log::error('Payment Error: ' . $e->getMessage());
@@ -910,7 +894,16 @@ class OrderController extends Controller
         $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
         $confirmation_num = $order->order_confirmation_number;
 
+      
+        
         Mail::to($email)->send(new OrderConfirmationMail($order));
+        try {
+            Mail::to($request->billing_email)->send(new InoviceMail($order->id));
+            
+        } catch (\Exception $e) {
+            Log::error("Failed to send invoice mail for Order ID: {$order->id}. Error: " . $e->getMessage());
+        }
+
 
         return response()->json([
             'status' => true,

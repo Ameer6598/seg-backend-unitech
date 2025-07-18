@@ -59,7 +59,7 @@
             });
             Route::get('leave-impersonate', [ImpersonationController::class, 'leaveImpersonation']);
 
-            Route::middleware('role:owner,seg_subadmin,company_subadmin,company,company_subadmin')->group(function () {
+            Route::middleware('role:owner,seg_subadmin,company_subadmin,company')->group(function () {
                 Route::post('impersonate/employe/{id}', [ImpersonationController::class, 'impersonateemployee']);
             });
 
@@ -189,6 +189,12 @@
                 Route::post('change-company_subadmin-password', [CompanySubAdminController::class, 'changepassword']);
                 Route::post('update-company_subadmin', [CompanySubAdminController::class, 'updatedetails']);
             });
+
+            Route::middleware('role:seg_subadmin')->group(function () {
+                Route::post('change-seg_subadmin-password', [SegAdmincontroller::class, 'changepassword']);
+                Route::post('update-seg_subadmin', [SegAdmincontroller::class, 'updatedetails']);
+            });
+
 
             Route::middleware('role:company,company_subadmin,owner,seg_subadmin')->group(function () {
                 Route::post('employee/update', [EmployeeController::class, 'update']);

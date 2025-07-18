@@ -74,7 +74,7 @@ class ImpersonationController extends Controller
 
     public function impersonateemployee(Request $request, $id)
     {
-        if (!in_array($request->user()->role, ['owner', 'company'])) {
+        if (!in_array($request->user()->role, ['owner', 'company','seg_subadmin','company_subadmin'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
