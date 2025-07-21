@@ -40,7 +40,7 @@
     
     <p><strong>Order Summary:</strong></p>
     
-    <p><strong>Product:</strong> {{ $order->product->product_name }} - (Lens Type, Coatings, Treatments)</p>
+    <p><strong>Product:</strong> {{ $order->product->product_name }} </p>
     
     <p><strong>Order ID:</strong> {{ $order->order_confirmation_number }}</p>
     
