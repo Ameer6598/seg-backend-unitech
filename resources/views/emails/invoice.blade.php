@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -262,6 +263,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="invoice-container">
         <!-- Header -->
@@ -282,23 +284,32 @@
             <div class="section">
                 <h2 class="section-title">Bill To</h2>
                 <div class="info-card">
-                    <p class="customer-name">{{ $order->billing_address->first_name }} {{ $order->billing_address->last_name }}</p>
+                    <p class="customer-name">{{ $order->billing_address->first_name }}
+                        {{ $order->billing_address->last_name }}</p>
                     <div class="info-row">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span>{{ $order->billing_address->address }}@if($order->billing_address->second_address), {{ $order->billing_address->second_address }}@endif, {{ $order->billing_address->city }}, {{ $order->billing_address->state }}, {{ $order->billing_address->country }} {{ $order->billing_address->zip_postal_code }}</span>
+                        <span>{{ $order->billing_address->address }}@if ($order->billing_address->second_address)
+                                , {{ $order->billing_address->second_address }}
+                            @endif, {{ $order->billing_address->city }},
+                            {{ $order->billing_address->state }}, {{ $order->billing_address->country }}
+                            {{ $order->billing_address->zip_postal_code }}</span>
                     </div>
                     <div class="info-row">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                         <span>{{ $order->billing_address->email }}</span>
                     </div>
                     <div class="info-row">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                         </svg>
                         <span>{{ $order->billing_address->phone_number }}</span>
                     </div>
@@ -349,8 +360,27 @@
             <!-- Total Section -->
             <div class="section">
                 <div class="total-section">
+                    <span class="total-label">Amount to be pay:</span>
+                    <span class="total-amount">${{ number_format($order->paid_amount_via_card, 2) }}</span>
+                </div>
+            </div>
+
+            <!-- Payment Breakdown -->
+            <div class="section">
+                <h2 class="section-title">Payment Breakdown</h2>
+                <div class="info-card">
+                    <div class="info-row">
+                        <strong>Paid via Benefit:</strong>
+                        <span class="detail-value">${{ number_format($order->paid_amount_via_benefit, 2) }}</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Paid via Card:</strong>
+                        <span class="detail-value">${{ number_format($order->paid_amount_via_card, 2) }}</span>
+                    </div>
+                       <div class="total-section">
                     <span class="total-label">Total Amount</span>
                     <span class="total-amount">${{ number_format($order->net_total, 2) }}</span>
+                </div>
                 </div>
             </div>
 
@@ -358,18 +388,22 @@
             <div class="payment-section">
                 <div class="payment-status">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                     <span>Payment Status:</span>
-                    <span class="status-badge {{ $order->payment_status === 'paid' ? 'status-paid' : 'status-pending' }}">
+                    <span
+                        class="status-badge {{ $order->payment_status === 'paid' ? 'status-paid' : 'status-pending' }}">
                         {{ ucfirst($order->payment_status) }}
                     </span>
                 </div>
-                
-                @if($order->payment_status !== 'paid' && $order->stripe_invoice_url)
-                    <a href="{{ $order->stripe_invoice_url }}" class="pay-btn" style="color: white">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+
+                @if ($order->payment_status !== 'paid' && $order->stripe_invoice_url)
+                    <a href="{{ $order->stripe_invoice_url }}" class="pay-btn" style="color: white; ">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            style="margin-right: 0.5rem;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
                         Pay Now
                     </a>
@@ -383,4 +417,5 @@
         </div>
     </div>
 </body>
+
 </html>

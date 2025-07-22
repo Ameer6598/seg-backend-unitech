@@ -209,6 +209,19 @@ class AuthController extends Controller
         }
     }
 
+    public function employeeLatestPrescription()
+    {
+        $employeeId = auth('sanctum')->user()->employee_id;
+        $latestPrescription = PrecriptionDetails::where('employee_id', $employeeId)
+            ->latest()
+            ->first();
+
+        if (!$latestPrescription) {
+            return $this->errorResponse(null, 'No prescription found for this employee.', [], 404);
+        }
+
+        return $this->successResponse(['model' => 'users'], 'Latest prescription fetched successfully.', $latestPrescription);
+    }
 
 
     public function forgetpassword(Request $request)

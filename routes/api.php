@@ -32,6 +32,8 @@
 
         Route::post('/login', [AuthController::class, 'login']);
 
+
+
         Route::get('/loginerorr', [AuthController::class, 'loginerror'])->name('login');
 
         Route::post('set/newpassword', [AuthController::class, 'set']);
@@ -208,6 +210,8 @@
 
 
             Route::middleware('role:employee')->group(function () {
+                
+        Route::get('employee_latest_prescription', [AuthController::class, 'employeeLatestPrescription']);
                 Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
 
                 // Route::post('create-order', [OrderController::class, 'storeOrder']);

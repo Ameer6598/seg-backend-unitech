@@ -84,29 +84,29 @@ class OrderController extends Controller
             'frame_type' => 'required|string|max:255',
             'frame_prescription' => 'required|string|max:255',
             'prescription_image' => 'nullable|image|max:2048',
-            'od_left_sphere' => 'required|string|max:10',
-            'od_left_cylinders' => 'required|string|max:10',
-            'od_left_axis' => 'required|string|max:10',
-            'od_left_nv_add' => 'required|string|max:10',
-            'od_left_2_pds' => 'required|string|max:10',
-            'od_right_sphere' => 'required|string|max:10',
-            'od_right_cylinders' => 'required|string|max:10',
-            'od_right_axis' => 'required|string|max:10',
-            'od_right_nv_add' => 'required|string|max:10',
-            'od_right_2_pds' => 'required|string|max:10',
-            'pupil_distance' => 'required|string',
+            'od_left_sphere' => 'nullable|string|max:10',
+            'od_left_cylinders' => 'nullable|string|max:10',
+            'od_left_axis' => 'nullable|string|max:10',
+            'od_left_nv_add' => 'nullable|string|max:10',
+            'od_left_2_pds' => 'nullable|string|max:10',
+            'od_right_sphere' => 'nullable|string|max:10',
+            'od_right_cylinders' => 'nullable|string|max:10',
+            'od_right_axis' => 'nullable|string|max:10',
+            'od_right_nv_add' => 'nullable|string|max:10',
+            'od_right_2_pds' => 'nullable|string|max:10',
+            'pupil_distance' => 'nullable|string',
             'frame_picture' => 'nullable|image|max:2048',
             'pupil_distance_online' => 'nullable|string',
             'od_left_2_pds_online' => 'nullable|string|max:10',
             'od_right_2_pds_online' => 'nullable|string|max:10',
-            'vertical_right' => 'required|string',
-            'vertical_left' => 'required|string',
-            'vertical_base_direction_right' => 'required|string',
-            'vertical_base_direction_left' => 'required|string',
-            'horizontal_rigth' => 'required|string',
-            'horizontal_left' => 'required|string',
-            'horizontal_base_direction_right' => 'required|string',
-            'horizontal_base_direction_left' => 'required|string',
+            'vertical_right' => 'nullable|string',
+            'vertical_left' => 'nullable|string',
+            'vertical_base_direction_right' => 'nullable|string',
+            'vertical_base_direction_left' => 'nullable|string',
+            'horizontal_rigth' => 'nullable|string',
+            'horizontal_left' => 'nullable|string',
+            'horizontal_base_direction_right' => 'nullable|string',
+            'horizontal_base_direction_left' => 'nullable|string',
             'special_notes' => 'nullable|string',
         ]);
 
@@ -304,8 +304,8 @@ class OrderController extends Controller
                     'customer' => $customer->id,
                     'collection_method' => 'send_invoice',
                     'days_until_due' => 30,
-                    'auto_advance' => true,
-                    'description' => 'Order #' . $request->order_id,
+                    'auto_advance' => false, // Disable automatic email sending
+                    'description' => 'Order #' . $order->id,
                 ]);
 
                 InvoiceItem::create([
@@ -332,13 +332,12 @@ class OrderController extends Controller
         elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
             try {
                 $user = auth('sanctum')->user();
+                $remainingAmount = $request->net_total;
 
                 if ($user->role === 'employee') {
                     $employee = Employee::findOrFail($employeeId);
-                    $remainingAmount = $request->net_total;
                     $deductionAmount = min($employee->benefit_amount, $remainingAmount);
 
-                    // Deduct from employee benefit
                     if ($deductionAmount > 0) {
                         $employee->benefit_amount -= $deductionAmount;
                         $employee->save();
@@ -355,11 +354,8 @@ class OrderController extends Controller
                         $remainingAmount -= $deductionAmount;
                     }
                 } elseif ($user->role === 'company' || $user->role === 'company_subadmin') {
-
                     $companyId = $user->company_id;
-
                     $company = Company::findOrFail($companyId);
-                    $remainingAmount = $request->net_total;
                     $deductionAmount = min($company->benefit_amount, $remainingAmount);
 
                     if ($deductionAmount > 0) {
@@ -374,18 +370,16 @@ class OrderController extends Controller
                             'description' => 'order place on belhaf of benefits amount and pay later'
                         ];
 
-                        // Add subadmin_id if applicable
                         if ($user->role === 'company_subadmin') {
                             $transactionData['subadmin_id'] = $user->id;
                         }
 
                         Transaction::create($transactionData);
-
                         $this->deleteCompanyOrderDetails($companyId);
                         $remainingAmount -= $deductionAmount;
                     }
                 }
-                // Process remaining amount via Stripe if any
+
                 if ($remainingAmount > 0) {
                     try {
                         Stripe::setApiKey(config('services.stripe.secret'));
@@ -408,8 +402,8 @@ class OrderController extends Controller
                             'customer' => $customer->id,
                             'collection_method' => 'send_invoice',
                             'days_until_due' => 30,
-                            'auto_advance' => true,
-                            'description' => 'Order #' . $request->order_id . ' (Partial Benefit Payment)',
+                            'auto_advance' => false, // Disable automatic email sending
+                            'description' => 'Order #' . $order->id . ' (Partial Benefit Payment)',
                         ]);
 
                         InvoiceItem::create([
@@ -626,9 +620,11 @@ class OrderController extends Controller
         }
 
         $order = new Order();
+
+
         $order->employee_id = $employeeId;
         $order->company_id = $companyId;
-
+        $order->order_by = 'employee'; // 👈 Set by employee
         $order->fill($request->only([
             'blue_light_protection',
             'order_type',
@@ -748,8 +744,8 @@ class OrderController extends Controller
                     'customer' => $customer->id,
                     'collection_method' => 'send_invoice',
                     'days_until_due' => 30,
-                    'auto_advance' => true,
-                    'description' => 'Order #' . $request->order_id,
+                    'auto_advance' => false, // Disable automatic email sending
+                    'description' => 'Order #' . $order->id,
                 ]);
 
                 InvoiceItem::create([
@@ -766,6 +762,7 @@ class OrderController extends Controller
                     'stripe_invoice_id' => $finalInvoice->id,
                     'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
                 ]);
+                $this->deleteEmployeeOrderDetails($employeeId);
             } catch (\Exception $e) {
                 Log::error('Stripe Invoice Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
@@ -819,7 +816,7 @@ class OrderController extends Controller
                             'customer' => $customer->id,
                             'collection_method' => 'send_invoice',
                             'days_until_due' => 30,
-                            'auto_advance' => true,
+                            'auto_advance' => false,
                             'description' => 'Order #' . $request->order_id . ' (Partial Benefit Payment)',
                         ]);
 
@@ -1022,7 +1019,7 @@ class OrderController extends Controller
             ->with([
                 'employee_data:employee_id,name as employee_name,email',
                 'company_data:company_id,name as company_name,email',
-                'companysubadmin:id as subadmin_id,name as subadmin_name,email',
+                'companysubadmin:id,name as subadmin_name,email',
                 'orderPoints:order_id,point',
                 'prescription',
                 'shipping_address',
@@ -1065,7 +1062,7 @@ class OrderController extends Controller
                 'employee_data:employee_id,name as employee_name,email',
                 'company_data:company_id,name as company_name,email',
 
-                'companysubadmin:id as subadmin_id,name as subadmin_name,email',
+                'companysubadmin:id,name as subadmin_name,email',
                 'orderPoints:order_id,point',
                 'prescription',
                 'shipping_address',
@@ -1087,6 +1084,12 @@ class OrderController extends Controller
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
 
+            // Add subadmin_id inside companysubadmin object safely
+            if ($order->companysubadmin) {
+                $order->companysubadmin->subadmin_id = $order->companysubadmin->id;
+            }
+
+
             return $order;
         });
 
@@ -1106,7 +1109,7 @@ class OrderController extends Controller
         $orders = Order::with([
             'employee_data:employee_id,name as employee_name,email',
             'company_data:company_id,name as company_name,email',
-            'companysubadmin:id as subadmin_id,name as subadmin_name,email',
+            'companysubadmin:id,name as subadmin_name,email',
             'orderPoints:order_id,point',
             'prescription',
             'shipping_address',
@@ -1128,7 +1131,10 @@ class OrderController extends Controller
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
-
+            // Add subadmin_id inside companysubadmin object safely
+            if ($order->companysubadmin) {
+                $order->companysubadmin->subadmin_id = $order->companysubadmin->id;
+            }
 
             return $order;
         });
