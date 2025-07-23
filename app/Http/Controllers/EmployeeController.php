@@ -9,12 +9,13 @@ use App\Models\Employee;
 use App\Models\Transaction;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use App\Models\EmployeeProduct;
 use App\Exports\ExportEmployees;
 use App\Imports\ImportEmployees;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Maatwebsite\Excel\Facades\Excel;
@@ -36,16 +37,24 @@ class EmployeeController extends Controller
                 'phone' => 'required',
                 'password' => 'required',
                 'designation' => 'required',
-                'benefit_amount' => ['nullable', 'numeric'],
             ]);
-    
+
 
             DB::beginTransaction();
+
+            $CompanyId = auth('sanctum')->user()->company_id;
+
+            $companyData = Company::find($CompanyId);
+
+
+
             $employee = Employee::create([
                 'designation' => $request->designation ?? '',
                 'status' => $request->status ?? '',
                 'phone' => $request->phone ?? '',
-                'benefit_amount' => $request->benefit_amount ?? 0,
+                'benefit_amount' => $companyData->globel_amount,
+                'starting_date' => $companyData->starting_date, // Today's date
+                'ending_date' => $companyData->ending_date, // One year later
                 'company_id' => auth('sanctum')->user()->company_id,
             ]);
 
@@ -59,15 +68,16 @@ class EmployeeController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            if ($request->benefit_amount) {
-                Transaction::create([
-                    'employee_id' => $employee->id,
-                    'transaction_type' => 'credit',
-                    'amount' => $request->benefit_amount ?? '',
-                    'balance' => $request->benefit_amount ?? '',
-                    'description' => $request->description ?? '',
-                ]);
-            }
+
+
+
+            Transaction::create([
+                'employee_id' => $employee->id,
+                'transaction_type' => 'credit',
+                'amount' => $companyData->globel_amount,
+                'balance' => $companyData->globel_amount,
+                'description' => 'This is the benefit amount that the employee received upon registration',
+            ]);
 
             DB::commit();
 
@@ -185,7 +195,7 @@ class EmployeeController extends Controller
         }
     }
 
-    
+
 
 
     public function downloadSample()
@@ -231,27 +241,26 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'employee_id' => 'required|array',
             'employee_id.*' => 'exists:employees,id',
-            'amount' => 'required|numeric',
-            'type' => 'required|in:credit,debit',
             'starting_date' => 'nullable|date',
             'ending_date' => 'nullable|date|after_or_equal:starting_date',
         ]);
+
         try {
             DB::beginTransaction();
 
             $transactions = [];
-            foreach ($data['employee_id'] as $item) {
-                $employee = Employee::findOrFail($item);
-                $amount = $data['amount'];
-                $type = $data['type'];
 
-                if ($type === 'credit') {
-                    $employee->benefit_amount += $amount;
-                } else {
-                    $employee->benefit_amount -= $amount;
-                }
+            foreach ($data['employee_id'] as $employeeId) {
+                $employee = Employee::findOrFail($employeeId);
+                $company = Company::findOrFail($employee->company_id);
 
-                // Only update dates if provided
+                $amount = $company->globel_amount;
+                $type = 'credit';
+
+
+                    $employee->benefit_amount = $amount;
+
+                // Optionally update dates
                 if (isset($data['starting_date'])) {
                     $employee->starting_date = $data['starting_date'];
                 }
@@ -259,9 +268,9 @@ class EmployeeController extends Controller
                     $employee->ending_date = $data['ending_date'];
                 }
 
-
                 $employee->save();
 
+                // Create transaction
                 $transaction = Transaction::create([
                     'employee_id' => $employee->id,
                     'amount' => $amount,
@@ -277,7 +286,8 @@ class EmployeeController extends Controller
             }
 
             DB::commit();
-            return $this->successResponse(['model' => 'employee'], 'Benefits amounyt assign successfully', [
+
+            return $this->successResponse(['model' => 'employee'], 'Benefits amount assigned successfully', [
                 'transactions' => $transactions,
             ]);
         } catch (\Exception $e) {
@@ -285,6 +295,9 @@ class EmployeeController extends Controller
             return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 424);
         }
     }
+
+
+
 
     public function assignProduct(Request $request)
     {

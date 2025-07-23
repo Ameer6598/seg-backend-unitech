@@ -175,8 +175,8 @@
                     Route::post('create', [EmployeeController::class, 'create']);
                     Route::post('assign-product', [EmployeeController::class, 'assignProduct']);
                     // Route::post('update',[EmployeeController::class,'update']);
-                    Route::post('update-benefit-amount', [EmployeeController::class, 'bulkUpdate']);
-                    Route::post('update-company-benefit-amount', [CompanyController::class, 'bulkUpdateForCompany']);
+
+                    // Route::post('update-company-benefit-amount', [CompanyController::class, 'bulkUpdateForCompany']);
 
                     Route::delete('{employeeId}', [EmployeeController::class, 'delete']);
                     Route::get('{employeeId}', [EmployeeController::class, 'getEmployee']);
@@ -210,8 +210,8 @@
 
 
             Route::middleware('role:employee')->group(function () {
-                
-        Route::get('employee_latest_prescription', [AuthController::class, 'employeeLatestPrescription']);
+
+                Route::get('employee_latest_prescription', [AuthController::class, 'employeeLatestPrescription']);
                 Route::get('get-employee-products', [ProductController::class, 'getemployeeProducts']);
 
                 // Route::post('create-order', [OrderController::class, 'storeOrder']);
@@ -293,6 +293,9 @@
 
             // routes for lense manegment
             Route::middleware('role:owner,seg_subadmin')->group(function () {
+
+                Route::post('update-benefit-amount', [EmployeeController::class, 'bulkUpdate']);
+
                 //lense lens material
                 Route::get('lens-materials', [lensManegmentController::class, 'get']); // all
                 Route::get('lens-materials/{id}', [lensManegmentController::class, 'get']); // single
@@ -324,5 +327,6 @@
                 Route::post('create-blue-light-protection', [lensManegmentController::class, 'createBlueLightProtection']);
                 Route::post('update-blue-light-protection/{id}', [lensManegmentController::class, 'updateBlueLightProtection']);
                 Route::delete('delete/blue-light-protection/{id}', [lensManegmentController::class, 'deleteBlueLightProtection']); // single
+
             });
         });

@@ -25,24 +25,30 @@ class CompanyController extends Controller
     //
     use ApiResponse;
 
+
+
     public function create(Request $request)
     {
         try {
+
             $request->validate([
                 'company_name' => 'required|string|max:255',
                 'username' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
-                'phone' => 'required|unique:companies,phone', // Checks uniqueness in companies table
+                'phone' => 'required|unique:companies,phone',
                 'password' => 'required|string|min:6',
-                'company_logo' => 'nullable|image|max:5120', // Max 5MB
+                'company_logo' => 'nullable|image|max:5120',
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
+                'benefit_amount' => 'required|numeric|min:0',
+
+                'starting_date' => 'required|date',
+                'ending_date' => 'required|date|after_or_equal:starting_date',
             ]);
-
-
 
             DB::beginTransaction();
 
+            // Handle company logo upload
             $logoPath = null;
             if ($request->hasFile('company_logo')) {
                 $file = $request->file('company_logo');
@@ -56,6 +62,13 @@ class CompanyController extends Controller
                 $logoPath = '/projectimages/company_logos/' . $fileName;
             }
 
+            // Set initial values
+            $benefitAmount = $request->benefit_amount ?? 0;
+            $benefitType = 'credit';
+            $startingDate = $request->starting_date ?? null;
+            $endingDate = $request->ending_date ?? null;
+
+            // Create the company with initial benefit_amount, starting_date, and ending_date
             $company = Company::create([
                 'company_name' => $request->company_name,
                 'address' => $request->address ?? '',
@@ -63,8 +76,13 @@ class CompanyController extends Controller
                 'company_logo' => $logoPath,
                 'company_Information' => $request->company_Information,
                 'benefits' => $request->benefits,
+                'benefit_amount' => $benefitAmount,
+                'globel_amount' => $benefitAmount,
+                'starting_date' => $startingDate, // Assign starting_date
+                'ending_date' => $endingDate, // Assign ending_date
             ]);
 
+            // Create the user
             $user = User::create([
                 'name' => $request->username,
                 'email' => $request->email,
@@ -74,12 +92,25 @@ class CompanyController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
+
+            if ($benefitAmount > 0) {
+                $transaction = Transaction::create([
+                    'company_id' => $company->id,
+                    'amount' => $benefitAmount,
+                    'balance' => $company->benefit_amount,
+                    'transaction_type' => $benefitType,
+                ]);
+            }
+
             DB::commit();
 
             return $this->successResponse(
                 ['model' => 'company'],
                 'Company and User created successfully',
-                ['company' => $company]
+                [
+                    'company' => $company,
+                    'transaction_id' => $transaction ? $transaction->id : null,
+                ]
             );
         } catch (\Exception $e) {
             DB::rollBack();
@@ -87,24 +118,29 @@ class CompanyController extends Controller
         }
     }
 
-
-
     public function update(Request $request)
     {
-
         try {
-            $request->validate([
+            $rules = [
                 'company_name' => 'required|string|max:255',
                 'username' => 'required',
                 'email' => 'required|email',
                 'company_id' => 'required',
-                'status' => 'required|in:0,1', // Correct syntax for in rule
+                'status' => 'required|in:0,1',
                 'company_logo' => 'nullable|image|max:5120',
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
+            ];
 
+            // Conditional validation: Only apply if benefit_amount is present
+            if ($request->has('benefit_amount')) {
+                $rules['benefit_amount'] = 'required|numeric|min:0';
+                $rules['starting_date'] = 'required|date';
+                $rules['ending_date'] = 'required|date|after_or_equal:starting_date';
+            }
 
-            ]);
+            $validated = $request->validate($rules);
+
             DB::beginTransaction();
 
             $company = Company::findOrFail($request->company_id);
@@ -114,11 +150,9 @@ class CompanyController extends Controller
 
             if ($request->hasFile('company_logo')) {
                 $oldLogoPath = public_path($company->company_logo);
-
                 if ($company->company_logo && file_exists($oldLogoPath)) {
                     unlink($oldLogoPath);
                 }
-
 
                 $file = $request->file('company_logo');
                 $originalName = $file->getClientOriginalName();
@@ -133,15 +167,25 @@ class CompanyController extends Controller
                 $logoPath = '/projectimages/company_logos/' . $fileName;
             }
 
-
-            $company->update([
+            // Update basic fields
+            $updateData = [
                 'company_name' => $request->company_name,
                 'address' => $request->address ?? $company->address,
                 'phone' => $request->phone ?? $company->phone,
                 'company_logo' => $logoPath,
                 'company_Information' => $request->company_Information,
                 'benefits' => $request->benefits,
-            ]);
+            ];
+
+            // If benefit_amount is present, update related fields
+            if ($request->has('benefit_amount')) {
+                $updateData['benefit_amount'] = $request->benefit_amount;
+                $updateData['globel_amount'] = $request->benefit_amount;
+                $updateData['starting_date'] = $request->starting_date;
+                $updateData['ending_date'] = $request->ending_date;
+            }
+
+            $company->update($updateData);
 
             $user->update([
                 'name' => $request->username,
@@ -149,6 +193,23 @@ class CompanyController extends Controller
                 'password' => $request->password ? Hash::make($request->password) : $user->password,
                 'status' => $request->status,
             ]);
+
+
+            if ($request->has('benefit_amount')) {
+                $benefitAmount = $request->benefit_amount;
+                $benefitType = 'credit';
+
+                if ($benefitAmount > 0 && $benefitAmount != $company->benefit_amount) {
+                    Transaction::create([
+                        'company_id' => $company->id,
+                        'amount' => $benefitAmount,
+                        'balance' => $benefitAmount, // assuming this should reflect new benefit_amount
+                        'transaction_type' => $benefitType,
+                    ]);
+                }
+            }
+
+
 
             DB::commit();
 
@@ -160,10 +221,6 @@ class CompanyController extends Controller
             return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
         }
     }
-
-
-
-
 
     public function delete($companyId)
     {
@@ -487,62 +544,54 @@ class CompanyController extends Controller
         }
     }
 
-    public function bulkUpdateForCompany(Request $request)
-    {
-        $data = $request->validate([
-            'amount' => 'required|numeric',
-            'type' => 'required|in:credit,debit',
-            'starting_date' => 'nullable|date',
-            'ending_date' => 'nullable|date|after_or_equal:starting_date',
-        ]);
+    // public function bulkUpdateForCompany(Request $request)
+    // {
+    //     $data = $request->validate([
+    //         'amount' => 'required|numeric',
+    //         'type' => 'required|in:credit,debit',
+    //         'starting_date' => 'nullable|date',
+    //         'ending_date' => 'nullable|date|after_or_equal:starting_date',
+    //     ]);
 
-        try {
-            DB::beginTransaction();
-
-            // Get the authenticated user's company_id
-            $companyId = auth('sanctum')->user()->company_id;
-            $company = Company::findOrFail($companyId);
-
-            $amount = $data['amount'];
-            $type = $data['type'];
-
-            // Update benefit_amount
-            if ($type === 'credit') {
-                $company->benefit_amount += $amount;
-            } else {
-                $company->benefit_amount -= $amount;
-            }
-
-            // Optional: update starting and ending dates if provided
-            if (isset($data['starting_date'])) {
-                $company->starting_date = $data['starting_date'];
-            }
-            if (isset($data['ending_date'])) {
-                $company->ending_date = $data['ending_date'];
-            }
-
-            $company->save();
-
-            // Store the transaction
-            $transaction = Transaction::create([
-                'company_id' => $company->id,
-                'amount' => $amount,
-                'balance' => $company->benefit_amount,
-                'transaction_type' => $type,
-            ]);
-
-            DB::commit();
-
-            return $this->successResponse(['model' => 'company'], 'Benefits amounyt assign successfully', [
-                'transaction_id' => $transaction->id,
-                'company_id' => $company->id,
-                'status' => 'success',
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 424);
-        }
-    }
+    //     try {
+    //         DB::beginTransaction();
+    //         // Get the authenticated user's company_id
+    //         $companyId = auth('sanctum')->user()->company_id;
+    //         $company = Company::findOrFail($companyId);
+    //         $amount = $data['amount'];
+    //         $type = $data['type'];
+    //         // Update benefit_amount
+    //         if ($type === 'credit') {
+    //             $company->benefit_amount += $amount;
+    //         } else {
+    //             $company->benefit_amount -= $amount;
+    //         }
+    //         // Optional: update starting and ending dates if provided
+    //         if (isset($data['starting_date'])) {
+    //             $company->starting_date = $data['starting_date'];
+    //         }
+    //         if (isset($data['ending_date'])) {
+    //             $company->ending_date = $data['ending_date'];
+    //         }
+    //         $company->save();
+    //         // Store the transaction
+    //         $transaction = Transaction::create([
+    //             'company_id' => $company->id,
+    //             'amount' => $amount,
+    //             'balance' => $company->benefit_amount,
+    //             'transaction_type' => $type,
+    //         ]);
+    //         DB::commit();
+    //         return $this->successResponse(['model' => 'company'], 'Benefits amounyt assign successfully', [
+    //             'transaction_id' => $transaction->id,
+    //             'company_id' => $company->id,
+    //             'status' => 'success',
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 424);
+    //     }
+    // }
 
 
     public function assignProductToCompany(Request $request)
