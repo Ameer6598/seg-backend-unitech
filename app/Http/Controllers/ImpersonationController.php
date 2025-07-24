@@ -18,9 +18,10 @@ class ImpersonationController extends Controller
 
     public function impersonatecompany(Request $request, $id)
     {
-        if ($request->user()->role !== 'owner') {
+        if (!in_array($request->user()->role, ['owner', 'seg_subadmin'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+
 
         $superadmin = $request->user();
         $originalToken = $request->bearerToken();
@@ -74,7 +75,7 @@ class ImpersonationController extends Controller
 
     public function impersonateemployee(Request $request, $id)
     {
-        if (!in_array($request->user()->role, ['owner', 'company','seg_subadmin','company_subadmin'])) {
+        if (!in_array($request->user()->role, ['owner', 'company', 'seg_subadmin', 'company_subadmin'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 

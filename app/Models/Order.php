@@ -33,6 +33,11 @@ class Order extends Model
         return $this->belongsTo(User::class, 'subadmin_id', 'id');
     }
 
+    public function company()
+{
+    return $this->belongsTo(Company::class, 'company_id', 'id');
+}
+ 
 
 
     public function orderPoints()

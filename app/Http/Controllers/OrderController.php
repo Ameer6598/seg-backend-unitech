@@ -1018,8 +1018,10 @@ class OrderController extends Controller
         $orders = Order::where('employee_id', $EmplyeeId)
             ->with([
                 'employee_data:employee_id,name as employee_name,email',
-                'company_data:company_id,name as company_name,email',
+                'company_data:company_id,email',
+
                 'companysubadmin:id,name as subadmin_name,email',
+                'company:id,company_name',
                 'orderPoints:order_id,point',
                 'prescription',
                 'shipping_address',
@@ -1041,6 +1043,13 @@ class OrderController extends Controller
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
 
+            if ($order->company) {
+                $order->company_data->company_name = $order->company->company_name;
+            }
+
+            unset($order->company); // remove original relation if needed
+
+
             return $order;
         });
 
@@ -1060,9 +1069,9 @@ class OrderController extends Controller
         $orders = Order::where('company_id', $CompanyId)
             ->with([
                 'employee_data:employee_id,name as employee_name,email',
-                'company_data:company_id,name as company_name,email',
-
+                'company_data:company_id,email',
                 'companysubadmin:id,name as subadmin_name,email',
+                'company:id,company_name',
                 'orderPoints:order_id,point',
                 'prescription',
                 'shipping_address',
@@ -1088,6 +1097,11 @@ class OrderController extends Controller
             if ($order->companysubadmin) {
                 $order->companysubadmin->subadmin_id = $order->companysubadmin->id;
             }
+            if ($order->company) {
+                $order->company_data->company_name = $order->company->company_name;
+            }
+
+            unset($order->company); // remove original relation if needed
 
 
             return $order;
@@ -1108,8 +1122,9 @@ class OrderController extends Controller
 
         $orders = Order::with([
             'employee_data:employee_id,name as employee_name,email',
-            'company_data:company_id,name as company_name,email',
+            'company_data:company_id,email',
             'companysubadmin:id,name as subadmin_name,email',
+            'company:id,company_name',
             'orderPoints:order_id,point',
             'prescription',
             'shipping_address',
@@ -1131,10 +1146,16 @@ class OrderController extends Controller
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
-            // Add subadmin_id inside companysubadmin object safely
+
             if ($order->companysubadmin) {
                 $order->companysubadmin->subadmin_id = $order->companysubadmin->id;
             }
+
+            if ($order->company) {
+                $order->company_data->company_name = $order->company->company_name;
+            }
+
+            unset($order->company); // remove original relation if needed
 
             return $order;
         });
@@ -1146,6 +1167,9 @@ class OrderController extends Controller
             'data' => $orders
         ]);
     }
+
+
+
     public function updateOrderStatus(Request $request)
     {
         try {
