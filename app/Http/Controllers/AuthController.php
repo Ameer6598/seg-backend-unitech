@@ -156,6 +156,9 @@ class AuthController extends Controller
             'benefit_amount' => $user->role === 'employee'
                 ? Employee::where('id', $user->employee_id)->value('benefit_amount')
                 : Company::where('id', $user->company_id)->value('benefit_amount'),
+            'free_order_limit' => $user->role === 'employee'
+                ? Employee::where('id', $user->employee_id)->value('free_order_limit')
+                : Company::where('id', $user->company_id)->value('free_order_limit'),
             'order_count' => $orderCount,
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
