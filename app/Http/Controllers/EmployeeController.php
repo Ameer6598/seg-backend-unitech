@@ -39,45 +39,73 @@ class EmployeeController extends Controller
                 'designation' => 'required',
             ]);
 
-
             DB::beginTransaction();
 
             $CompanyId = auth('sanctum')->user()->company_id;
+            $companyData = Company::findOrFail($CompanyId);
 
-            $companyData = Company::find($CompanyId);
+            // Validate: Only one deal type should be active
+            if ($companyData->is_benefit_amount_deal && $companyData->is_free_order_deal) {
+                return $this->errorResponse(['model' => 'employee'], 'Company has both deal types enabled. Only one can be active.', [], 422);
+            }
 
+            // Initialize default values
+            $isBenefitDeal = 0;
+            $isFreeOrderDeal = 0;
+            $benefitAmount = 0;
+            $freeOrderLimit = 0;
+            $startingDate = null;
+            $endingDate = null;
 
+            if ($companyData->is_benefit_amount_deal == 1) {
+                $isBenefitDeal = 1;
+                $benefitAmount = $companyData->globel_amount;
+                $startingDate = $companyData->starting_date;
+                $endingDate = $companyData->ending_date;
+            }
 
+            if ($companyData->is_free_order_deal == 1) {
+                $isFreeOrderDeal = 1;
+                $freeOrderLimit = $companyData->free_order_limit;
+                $startingDate = $companyData->starting_date;
+                $endingDate = $companyData->ending_date;
+            }
+
+            // Create employee
             $employee = Employee::create([
-                'designation' => $request->designation ?? '',
+                'designation' => $request->designation,
                 'status' => $request->status ?? '',
-                'phone' => $request->phone ?? '',
-                'benefit_amount' => $companyData->globel_amount,
-                'starting_date' => $companyData->starting_date, // Today's date
-                'ending_date' => $companyData->ending_date, // One year later
-                'company_id' => auth('sanctum')->user()->company_id,
+                'phone' => $request->phone,
+                'is_benefit_amount_deal' => $isBenefitDeal,
+                'benefit_amount' => $benefitAmount,
+                'is_free_order_deal' => $isFreeOrderDeal,
+                'free_order_limit' => $freeOrderLimit,
+                'starting_date' => $startingDate,
+                'ending_date' => $endingDate,
+                'company_id' => $CompanyId,
             ]);
 
+            // Create user account for employee
             User::create([
                 'name' => $request->username,
                 'email' => $request->email,
                 'role' => 'employee',
-                'company_id' => auth('sanctum')->user()->company_id,
+                'company_id' => $CompanyId,
                 'employee_id' => $employee->id,
                 'verification_number' => Str::uuid(),
                 'password' => Hash::make($request->password),
             ]);
 
-
-
-
-            Transaction::create([
-                'employee_id' => $employee->id,
-                'transaction_type' => 'credit',
-                'amount' => $companyData->globel_amount,
-                'balance' => $companyData->globel_amount,
-                'description' => 'This is the benefit amount that the employee received upon registration',
-            ]);
+            // Create transaction if benefit deal is active
+            if ($isBenefitDeal && $benefitAmount > 0) {
+                Transaction::create([
+                    'employee_id' => $employee->id,
+                    'transaction_type' => 'credit',
+                    'amount' => $benefitAmount,
+                    'balance' => $benefitAmount,
+                    'description' => 'This is the benefit amount that the employee received upon registration',
+                ]);
+            }
 
             DB::commit();
 
@@ -89,6 +117,7 @@ class EmployeeController extends Controller
             return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 422);
         }
     }
+
 
     public function update(Request $request)
     {
@@ -236,6 +265,66 @@ class EmployeeController extends Controller
         }
     }
 
+    // public function bulkUpdate(Request $request)
+    // {
+    //     $data = $request->validate([
+    //         'employee_id' => 'required|array',
+    //         'employee_id.*' => 'exists:employees,id',
+    //         'starting_date' => 'nullable|date',
+    //         'ending_date' => 'nullable|date|after_or_equal:starting_date',
+    //     ]);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $transactions = [];
+
+    //         foreach ($data['employee_id'] as $employeeId) {
+    //             $employee = Employee::findOrFail($employeeId);
+    //             $company = Company::findOrFail($employee->company_id);
+
+    //             $amount = $company->globel_amount;
+    //             $type = 'credit';
+
+
+    //             $employee->benefit_amount = $amount;
+
+    //             // Optionally update dates
+    //             if (isset($data['starting_date'])) {
+    //                 $employee->starting_date = $data['starting_date'];
+    //             }
+    //             if (isset($data['ending_date'])) {
+    //                 $employee->ending_date = $data['ending_date'];
+    //             }
+
+    //             $employee->save();
+
+    //             // Create transaction
+    //             $transaction = Transaction::create([
+    //                 'employee_id' => $employee->id,
+    //                 'amount' => $amount,
+    //                 'balance' => $employee->benefit_amount,
+    //                 'transaction_type' => $type,
+    //             ]);
+
+    //             $transactions[] = [
+    //                 'employee_id' => $employee->id,
+    //                 'transaction_id' => $transaction->id,
+    //                 'status' => 'success',
+    //             ];
+    //         }
+
+    //         DB::commit();
+
+    //         return $this->successResponse(['model' => 'employee'], 'Benefits amount assigned successfully', [
+    //             'transactions' => $transactions,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return $this->errorResponse(['model' => 'employee'], $e->getMessage(), [], 424);
+    //     }
+    // }
+
     public function bulkUpdate(Request $request)
     {
         $data = $request->validate([
@@ -254,40 +343,58 @@ class EmployeeController extends Controller
                 $employee = Employee::findOrFail($employeeId);
                 $company = Company::findOrFail($employee->company_id);
 
-                $amount = $company->globel_amount;
-                $type = 'credit';
-
-
-                    $employee->benefit_amount = $amount;
-
-                // Optionally update dates
-                if (isset($data['starting_date'])) {
-                    $employee->starting_date = $data['starting_date'];
-                }
-                if (isset($data['ending_date'])) {
-                    $employee->ending_date = $data['ending_date'];
+                // Check if company has valid deal type
+                if ($company->is_benefit_amount_deal && $company->is_free_order_deal) {
+                    return $this->errorResponse(['model' => 'employee'], 'Company has both deal types enabled. Only one should be active.', [], 422);
                 }
 
-                $employee->save();
+                $updateData = [
+                    'starting_date' => $data['starting_date'] ?? $employee->starting_date,
+                    'ending_date' => $data['ending_date'] ?? $employee->ending_date,
+                ];
 
-                // Create transaction
-                $transaction = Transaction::create([
-                    'employee_id' => $employee->id,
-                    'amount' => $amount,
-                    'balance' => $employee->benefit_amount,
-                    'transaction_type' => $type,
-                ]);
+                // Deal type: benefit amount
+                if ($company->is_benefit_amount_deal == 1) {
+                    $updateData['benefit_amount'] = $company->globel_amount;
+                    $updateData['free_order_limit'] = 0;
+                    $updateData['is_benefit_amount_deal'] = 1;
+                    $updateData['is_free_order_deal'] = 0;
+
+                    $employee->update($updateData);
+
+                    $transaction = Transaction::create([
+                        'employee_id' => $employee->id,
+                        'amount' => $company->globel_amount,
+                        'balance' => $company->globel_amount,
+                        'transaction_type' => 'credit',
+                        'description' => '',
+                    ]);
+                }
+                // Deal type: free order
+                elseif ($company->is_free_order_deal == 1) {
+                    $updateData['free_order_limit'] = $company->global_free_order_limit;
+                    $updateData['benefit_amount'] = 0;
+                    $updateData['is_benefit_amount_deal'] = 0;
+                    $updateData['is_free_order_deal'] = 1;
+
+                    $employee->update($updateData);
+
+                    $transaction = null; // No monetary transaction
+                } else {
+                    // No active deal — skip
+                    continue;
+                }
 
                 $transactions[] = [
                     'employee_id' => $employee->id,
-                    'transaction_id' => $transaction->id,
+                    'transaction_id' => $transaction->id ?? null,
                     'status' => 'success',
                 ];
             }
 
             DB::commit();
 
-            return $this->successResponse(['model' => 'employee'], 'Benefits amount assigned successfully', [
+            return $this->successResponse(['model' => 'employee'], 'Employee deals updated successfully', [
                 'transactions' => $transactions,
             ]);
         } catch (\Exception $e) {

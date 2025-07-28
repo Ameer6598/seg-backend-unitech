@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\Transaction;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Models\CompanyProduct;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -14,7 +16,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str; // Top par add karein agar nahi kiya
 
 
 
@@ -30,7 +31,6 @@ class CompanyController extends Controller
     public function create(Request $request)
     {
         try {
-
             $request->validate([
                 'company_name' => 'required|string|max:255',
                 'username' => 'required|string|max:255',
@@ -40,11 +40,23 @@ class CompanyController extends Controller
                 'company_logo' => 'nullable|image|max:5120',
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
-                'benefit_amount' => 'required|numeric|min:0',
 
+                'is_benefit_amount_deal' => 'required|in:0,1',
+                'is_free_order_deal' => 'required|in:0,1',
+                // Conditional validations
+                'benefit_amount' => 'required_if:is_benefit_amount_deal,1|nullable|numeric|min:0',
                 'starting_date' => 'required|date',
                 'ending_date' => 'required|date|after_or_equal:starting_date',
+
+                'free_order_limit' => 'required_if:is_free_order_deal,1|nullable|integer|min:1',
             ]);
+
+
+
+            // Prevent both deal types from being active at the same time
+            if ($request->is_benefit_amount_deal && $request->is_free_order_deal) {
+                return $this->errorResponse(['model' => 'company'], 'You cannot enable both benefit and free order deal at the same time.', [], 422);
+            }
 
             DB::beginTransaction();
 
@@ -67,8 +79,9 @@ class CompanyController extends Controller
             $benefitType = 'credit';
             $startingDate = $request->starting_date ?? null;
             $endingDate = $request->ending_date ?? null;
+            $freeOrderLimit = $request->free_order_limit ?? 0;
 
-            // Create the company with initial benefit_amount, starting_date, and ending_date
+
             $company = Company::create([
                 'company_name' => $request->company_name,
                 'address' => $request->address ?? '',
@@ -80,6 +93,11 @@ class CompanyController extends Controller
                 'globel_amount' => $benefitAmount,
                 'starting_date' => $startingDate, // Assign starting_date
                 'ending_date' => $endingDate, // Assign ending_date
+                'is_benefit_amount_deal' => $request->is_benefit_amount_deal,
+                'is_free_order_deal' => $request->is_free_order_deal,
+                'free_order_limit' => $freeOrderLimit,
+                'global_free_order_limit' => $freeOrderLimit,
+
             ]);
 
             // Create the user
@@ -93,7 +111,7 @@ class CompanyController extends Controller
             ]);
 
 
-            if ($benefitAmount > 0) {
+            if ($request->is_benefit_amount_deal && $benefitAmount > 0) {
                 $transaction = Transaction::create([
                     'company_id' => $company->id,
                     'amount' => $benefitAmount,
@@ -109,7 +127,7 @@ class CompanyController extends Controller
                 'Company and User created successfully',
                 [
                     'company' => $company,
-                    'transaction_id' => $transaction ? $transaction->id : null,
+                    'transaction_id' => null,
                 ]
             );
         } catch (\Exception $e) {
@@ -130,16 +148,64 @@ class CompanyController extends Controller
                 'company_logo' => 'nullable|image|max:5120',
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
+                'is_benefit_amount_deal' => 'required|in:0,1',
+                'is_free_order_deal' => 'required|in:0,1',
+                'starting_date' => 'required|date',
+                'ending_date' => 'required|date|after_or_equal:starting_date',
+                'assig_to_exsiting_employee' => 'required|boolean',
             ];
 
-            // Conditional validation: Only apply if benefit_amount is present
-            if ($request->has('benefit_amount')) {
-                $rules['benefit_amount'] = 'required|numeric|min:0';
-                $rules['starting_date'] = 'required|date';
-                $rules['ending_date'] = 'required|date|after_or_equal:starting_date';
+            if ($request->is_benefit_amount_deal && $request->is_free_order_deal) {
+                return $this->errorResponse(['model' => 'company'], 'You cannot enable both benefit and free order deal at the same time.', [], 422);
             }
 
+
+            // Add dynamic rules based on deal type
+            if ($request->is_benefit_amount_deal == 1) {
+                $rules['benefit_amount'] = 'required|numeric|min:0';
+            }
+
+            if ($request->is_free_order_deal == 1) {
+                $rules['free_order_limit'] = 'required|integer|min:1';
+            }
+
+
+            // $company = Company::findOrFail($request->company_id);
+
+            // if ($request->is_benefit_amount_deal == 1) {
+            //     $rules['benefit_amount'] = 'required|numeric|min:0';
+
+            //     $empolyee = Employee::where('company_id', $request->company_id)->get();
+            //     $employee->is_benefit_amount_deal = 1;
+            //     $employee->is_free_order_deal = 0;
+
+            //     if ($request->assig_to_exsiting_employee = true) {
+            //         $employee->benefit_amount = $company->globel_amount;
+            //         $employee->free_order_limit = 0;
+            //     } else {
+            //         $employee->benefit_amount = 0;
+            //     }
+            // }
+
+            // if ($request->is_free_order_deal == 1) {
+
+            //     $rules['free_order_limit'] = 'required|integer|min:1';
+
+            //     $empolyee = Employee::where('company_id', $request->company_id)->get();
+            //     $employee->is_benefit_amount_deal = 0;
+            //     $employee->is_free_order_deal = 1;
+
+            //     if ($request->assig_to_exsiting_employee = true) {
+            //         $employee->free_order_limit = $company->global_free_order_limit;
+            //         $employee->benefit_amount = 0;
+            //     } else {
+            //         $employee->free_order_limit = 0;
+            //     }
+            // }
+
             $validated = $request->validate($rules);
+
+
 
             DB::beginTransaction();
 
@@ -167,7 +233,7 @@ class CompanyController extends Controller
                 $logoPath = '/projectimages/company_logos/' . $fileName;
             }
 
-            // Update basic fields
+            // Prepare update data
             $updateData = [
                 'company_name' => $request->company_name,
                 'address' => $request->address ?? $company->address,
@@ -175,18 +241,25 @@ class CompanyController extends Controller
                 'company_logo' => $logoPath,
                 'company_Information' => $request->company_Information,
                 'benefits' => $request->benefits,
+                'is_benefit_amount_deal' => $request->is_benefit_amount_deal,
+                'is_free_order_deal' => $request->is_free_order_deal,
+                'starting_date' => $request->starting_date,
+                'ending_date' => $request->ending_date,
             ];
 
-            // If benefit_amount is present, update related fields
-            if ($request->has('benefit_amount')) {
+            if ($request->is_benefit_amount_deal == 1) {
                 $updateData['benefit_amount'] = $request->benefit_amount;
                 $updateData['globel_amount'] = $request->benefit_amount;
-                $updateData['starting_date'] = $request->starting_date;
-                $updateData['ending_date'] = $request->ending_date;
+                $updateData['free_order_limit'] = 0;
+                $updateData['global_free_order_limit'] = 0;
+            } elseif ($request->is_free_order_deal == 1) {
+                $updateData['free_order_limit'] = $request->free_order_limit;
+                $updateData['global_free_order_limit'] = $request->free_order_limit;
+                $updateData['benefit_amount'] = 0;
+                $updateData['globel_amount'] = 0;
             }
 
             $company->update($updateData);
-
             $user->update([
                 'name' => $request->username,
                 'email' => $request->email,
@@ -195,20 +268,57 @@ class CompanyController extends Controller
             ]);
 
 
-            if ($request->has('benefit_amount')) {
-                $benefitAmount = $request->benefit_amount;
-                $benefitType = 'credit';
+            // Update all employees if requested
+            if ($request->has('assig_to_exsiting_employee') && $request->assig_to_exsiting_employee == true) {
+                // Update all employees
+                $employees = Employee::where('company_id', $company->id)->get();
 
-                if ($benefitAmount > 0 && $benefitAmount != $company->benefit_amount) {
-                    Transaction::create([
-                        'company_id' => $company->id,
-                        'amount' => $benefitAmount,
-                        'balance' => $benefitAmount, // assuming this should reflect new benefit_amount
-                        'transaction_type' => $benefitType,
-                    ]);
+                foreach ($employees as $employee) {
+                    if ($request->is_benefit_amount_deal == 1) {
+                        $employee->is_benefit_amount_deal = 1;
+                        $employee->is_free_order_deal = 0;
+
+                        if ($request->assig_to_exsiting_employee == true) {
+                            $employee->benefit_amount = $company->globel_amount;
+                            $employee->free_order_limit = 0;
+                        } else {
+                            $employee->benefit_amount = 0;
+                            $employee->free_order_limit = 0; // Optional: set to 0 to be safe
+                        }
+                    } elseif ($request->is_free_order_deal == 1) {
+                        $employee->is_benefit_amount_deal = 0;
+                        $employee->is_free_order_deal = 1;
+
+                        if ($request->assig_to_exsiting_employee == true) {
+                            $employee->free_order_limit = $company->global_free_order_limit;
+                            $employee->benefit_amount = 0;
+                        } else {
+                            $employee->free_order_limit = 0;
+                            $employee->benefit_amount = 0; // Optional: clear other deal value
+                        }
+                    }
+
+                    // Always update these fields
+                    $employee->starting_date = $request->starting_date;
+                    $employee->ending_date = $request->ending_date;
+
+                    $employee->save();
                 }
             }
 
+            // Optional: Create transaction if benefit amount changed
+            if (
+                $request->is_benefit_amount_deal == 1 &&
+                $request->benefit_amount > 0 &&
+                $request->benefit_amount != $company->benefit_amount
+            ) {
+                Transaction::create([
+                    'company_id' => $company->id,
+                    'amount' => $request->benefit_amount,
+                    'balance' => $request->benefit_amount,
+                    'transaction_type' => 'credit',
+                ]);
+            }
 
 
             DB::commit();
