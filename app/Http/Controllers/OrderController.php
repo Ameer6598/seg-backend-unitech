@@ -15,6 +15,7 @@ use App\Models\Employee;
 use App\Mail\InoviceMail;
 use App\Models\Transaction;
 use App\Traits\ApiResponse;
+use App\Mail\OrderMailToSeg;
 use Illuminate\Http\Request;
 use App\Models\ChangesPoints;
 use App\Models\BillingAddress;
@@ -516,17 +517,33 @@ class OrderController extends Controller
         if ($role === 'employee') {
             $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
             $email = $user->email;
+            $company = User::where('role', 'company')->where('company_id', $user->company_id)->first();
+            $CompMail = $company->email;
+            Mail::to($CompMail)->send(new OrderConfirmationMail($order));
         } elseif ($role === 'company') {
             $user = User::where('role', 'company')->where('company_id', $companyId)->first();
             $email = $user->email;
         } elseif ($role === 'company_subadmin') {
             $user = User::where('role', 'company_subadmin')->where('id', $user->id)->first();
             $email = $user->email;
+            $company = User::where('role', 'company')->where('company_id', $user->company_id)->first();
+            $CompMail = $company->email;
+            Mail::to($CompMail)->send(new OrderConfirmationMail($order));
         }
 
 
 
         Mail::to($email)->send(new OrderConfirmationMail($order));
+
+
+        // Mail to Super Admin (assumed ID = 1)
+        $owner = User::find(1);
+        if ($owner) {
+            Mail::to($owner->email)->send(new OrderMailToSeg($order->id));
+        }
+
+
+
         try {
             Mail::to($request->billing_email)->send(new InoviceMail($order->id));
         } catch (\Exception $e) {
@@ -883,9 +900,21 @@ class OrderController extends Controller
         $email = $user->email; // ye wo email ha jo mare pass GHL me contact me save ha 
         $confirmation_num = $order->order_confirmation_number;
 
+        $company = User::where('role', 'company')->where('company_id', $user->company_id)->first();
+        $CompMail = $company->email;
 
 
         Mail::to($email)->send(new OrderConfirmationMail($order));
+        Mail::to($CompMail)->send(new OrderConfirmationMail($order));
+
+
+        // Mail to Super Admin (assumed ID = 1)
+        $owner = User::find(1);
+        if ($owner) {
+            Mail::to($owner->email)->send(new OrderMailToSeg($order->id));
+        }
+
+
         try {
             Mail::to($request->billing_email)->send(new InoviceMail($order->id));
         } catch (\Exception $e) {
@@ -1135,7 +1164,6 @@ class OrderController extends Controller
             'lens_tint:id,title',
             'lens_protection:id,title',
             'frame_size:frame_size_id,frame_size_name',
-
             'product:product_id,product_name,sku,manufacturer_name', // add manufacturer_name if needed
             'product.manufacturer:manufacturer_id,manufacturer_name', // nested relation to get manufacturer
             'variant'

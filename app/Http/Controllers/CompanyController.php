@@ -41,8 +41,8 @@ class CompanyController extends Controller
                 'company_Information' => 'nullable|string',
                 'benefits' => 'nullable|string',
 
-                'is_benefit_amount_deal' => 'required|in:0,1',
-                'is_free_order_deal' => 'required|in:0,1',
+                // 'is_benefit_amount_deal' => 'required|in:0,1',
+                // 'is_free_order_deal' => 'required|in:0,1',
                 // Conditional validations
                 'benefit_amount' => 'required_if:is_benefit_amount_deal,1|nullable|numeric|min:0',
                 'starting_date' => 'required|date',
@@ -404,7 +404,10 @@ class CompanyController extends Controller
                     'company_logo' => $company->company_logo,
                     'company_Information' => $company->company_Information,
                     'benefits' => $company->benefits,
+                    'is_benefit_amount_deal' => $company->is_benefit_amount_deal,
+                    'is_free_order_deal' => $company->is_free_order_deal,
                     'benefit_amount' => $company->benefit_amount,
+                    'free_order_limit' => $company->free_order_limit,
                     'starting_date' => $company->starting_date,
                     'ending_date' => $company->ending_date,
                     'created_at' => $company->created_at->format('Y-m-d H:i:s'),
@@ -565,7 +568,6 @@ class CompanyController extends Controller
     }
 
 
-
     public function companyPassword(Request $request)
     {
 
@@ -592,8 +594,6 @@ class CompanyController extends Controller
             return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 422);
         }
     }
-
-
     public function updatedetails(Request $request)
     {
 
@@ -656,7 +656,6 @@ class CompanyController extends Controller
             return $this->errorResponse(['model' => 'employe'], $e->getMessage(), [], 422);
         }
     }
-
     // public function bulkUpdateForCompany(Request $request)
     // {
     //     $data = $request->validate([
@@ -705,8 +704,6 @@ class CompanyController extends Controller
     //         return $this->errorResponse(['model' => 'company'], $e->getMessage(), [], 424);
     //     }
     // }
-
-
     public function assignProductToCompany(Request $request)
     {
         try {

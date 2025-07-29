@@ -93,6 +93,8 @@ class Order extends Model
         return $this->hasOne(FrameSize::class, 'frame_size_id', 'frame_size');
     }
 
+
+    
     public function product()
     {
         return $this->hasOne(Product::class, 'product_id', 'product_id')->with('manufacturer');

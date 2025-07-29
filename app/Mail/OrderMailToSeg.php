@@ -2,28 +2,28 @@
 
 namespace App\Mail;
 
-use App\Models\Order;
+use App\Models\Order; // Ensure you import the Order model
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Contracts\Queue\ShouldQueue;
-
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log; // Add this at the top if not already
 
-class OrderConfirmationMail extends Mailable
+
+class OrderMailToSeg extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $order;
+    public $order; // Public property to hold order data
     /**
      * Create a new message instance.
      */
-    public function __construct(Order $order)
+    public function __construct($orderId)
     {
-
-        $this->order = Order::where('id', $order->id)
+        // Fetch the order with related data using the provided order_id
+        $this->order = Order::where('id', $orderId)
             ->with([
                 'employee_data:employee_id,name as employee_name,email',
                 'company_data:company_id,name as company_name,email',
@@ -32,21 +32,18 @@ class OrderConfirmationMail extends Mailable
                 'billing_address',
                 'lens_protection:id,title',
                 'blue_light_protection:id,title',
-                'frame_size',
-                'product:product_id,product_name,sku,manufacturer_name,featured_image',
+                'frame_size:frame_size_id,frame_size_name',
+                'product:product_id,product_name,sku,manufacturer_name',
                 'product.manufacturer:manufacturer_id,manufacturer_name',
                 'variant',
             ])
             ->firstOrFail(); // Use firstOrFail to ensure the order exists
 
-   // Log order details in JSON format
-    Log::info('Order Details:', [
-        'order' => $this->order->toArray()
-    ]);
-
-            
+        // Log order details in JSON format
+        Log::info('Order Details:', [
+            'order' => $this->order->toArray()
+        ]);
     }
-
 
     /**
      * Get the message envelope.
@@ -54,7 +51,7 @@ class OrderConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Order Confirmation - Your Safety Eyewear is Being Processed at Safety Eye Guard!',
+            subject: 'New order received',
         );
     }
 
@@ -63,12 +60,12 @@ class OrderConfirmationMail extends Mailable
      */
     public function content(): Content
     {
+
         return new Content(
-            view: 'emails.order_confirmation', // Ensure this view exists
+            view: 'emails.OrderMailToSeg', // Replace with your actual Blade view name (e.g., resources/views/emails/invoice.blade.php)
             with: [
                 'order' => $this->order, // Pass the order data to the view
             ]
-
         );
     }
 
