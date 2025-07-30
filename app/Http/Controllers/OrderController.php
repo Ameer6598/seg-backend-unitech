@@ -39,78 +39,7 @@ class OrderController extends Controller
     use Common;
     public function newPresOrder(Request $request)
     {
-
-        $validator = Validator::make($request->all(), [
-            'blue_light_protection' => 'nullable|string',
-            'order_type' => 'nullable|string|max:255',
-            'lense_material' => 'nullable|string|max:255',
-            'scratch_coating' => 'nullable',
-            'lens_tint' => 'nullable|string|max:255',
-            'lens_protection' => 'nullable|string|max:255',
-            // Billing details
-            'billing_first_name' => 'required|string|max:255',
-            'billing_last_name' => 'required|string|max:255',
-            'billing_email' => 'required|email|max:255',
-            'billing_country' => 'required|string|max:255',
-            'billing_city' => 'required|string|max:255',
-            'billing_state' => 'required|string|max:255',
-            'billing_address' => 'required|string|max:1000',
-            'billing_second_address' => 'nullable|string|max:1000',
-            'billing_zip_postal_code' => 'required|string|max:20',
-            'billing_phone_number' => 'required|string|max:20',
-            // Shipping details
-            'shipping_first_name' => 'required|string|max:255',
-            'shipping_last_name' => 'required|string|max:255',
-            'shipping_email' => 'required|email|max:255',
-            'shipping_country' => 'required|string|max:255',
-            'shipping_city' => 'required|string|max:255',
-            'shipping_state' => 'required|string|max:255',
-            'shipping_address' => 'required|string|max:1000',
-            'shipping_second_address' => 'nullable|string|max:1000',
-            'shipping_zip_postal_code' => 'required|string|max:20',
-            'shipping_phone_number' => 'required|string|max:20',
-            'shipping_additional_information' => 'nullable|string|max:255',
-            'payment_method' => 'required|string|max:100',
-            'shipping_status' => 'required|string|max:100',
-
-
-            'product_id' => 'required|integer',
-            'variant_id' => 'required|integer',
-            'frame_size' => 'required',
-            'product_quantity' => 'required|integer|min:1',
-            'net_total' => 'required|numeric|min:0',
-            'paid_amount_via_benefit' => 'nullable|numeric|min:0',
-            'paid_amount_via_card' => 'nullable|numeric|min:0',
-            // Prescription fields
-            'frame_type' => 'required|string|max:255',
-            'frame_prescription' => 'required|string|max:255',
-            'prescription_image' => 'nullable|image|max:2048',
-            'od_left_sphere' => 'nullable|string|max:10',
-            'od_left_cylinders' => 'nullable|string|max:10',
-            'od_left_axis' => 'nullable|string|max:10',
-            'od_left_nv_add' => 'nullable|string|max:10',
-            'od_left_2_pds' => 'nullable|string|max:10',
-            'od_right_sphere' => 'nullable|string|max:10',
-            'od_right_cylinders' => 'nullable|string|max:10',
-            'od_right_axis' => 'nullable|string|max:10',
-            'od_right_nv_add' => 'nullable|string|max:10',
-            'od_right_2_pds' => 'nullable|string|max:10',
-            'pupil_distance' => 'nullable|string',
-            'frame_picture' => 'nullable|image|max:2048',
-            'pupil_distance_online' => 'nullable|string',
-            'od_left_2_pds_online' => 'nullable|string|max:10',
-            'od_right_2_pds_online' => 'nullable|string|max:10',
-            'vertical_right' => 'nullable|string',
-            'vertical_left' => 'nullable|string',
-            'vertical_base_direction_right' => 'nullable|string',
-            'vertical_base_direction_left' => 'nullable|string',
-            'horizontal_rigth' => 'nullable|string',
-            'horizontal_left' => 'nullable|string',
-            'horizontal_base_direction_right' => 'nullable|string',
-            'horizontal_base_direction_left' => 'nullable|string',
-            'special_notes' => 'nullable|string',
-        ]);
-
+        $validator = $this->validateNewPresOrder($request);
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
@@ -118,446 +47,55 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $employeeId = auth('sanctum')->user()->employee_id;
-        $companyId = auth('sanctum')->user()->company_id;
-
-        $user = auth('sanctum')->user();
-
-
-        $pres = new PrecriptionDetails();
-        if ($user->role === 'employee') {
-            $pres->employee_id = $user->employee_id;
-        } else if (in_array($user->role, ['company', 'company_subadmin'])) {
-            $pres->company_id = $user->company_id;
-        }
-
-
-        $pres->fill($request->only([
-            'frame_type',
-            'frame_prescription',
-            'od_left_sphere',
-            'od_left_cylinders',
-            'od_left_axis',
-            'od_left_nv_add',
-            'od_left_2_pds',
-            'od_right_sphere',
-            'od_right_cylinders',
-            'od_right_axis',
-            'od_right_nv_add',
-            'od_right_2_pds',
-            'pupil_distance',
-            'pupil_distance_online',
-            'od_left_2_pds_online',
-            'od_right_2_pds_online',
-            'vertical_right',
-            'vertical_left',
-            'vertical_base_direction_right',
-            'vertical_base_direction_left',
-            'horizontal_rigth',
-            'horizontal_left',
-            'horizontal_base_direction_right',
-            'horizontal_base_direction_left',
-            'special_notes',
-        ]));
-
-        if ($request->hasFile('prescription_image')) {
-            $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
-        }
-        if ($request->hasFile('frame_picture')) {
-            $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
-        }
-
-        $pres->save();
-
-
-
-        $order = new Order();
-
-
-        if ($user->role === 'employee') {
-            $order->employee_id = $employeeId;
-            $order->company_id = $companyId;
-            $order->order_by = 'employee'; // 👈 Set by employee
-
-        } elseif ($user->role === 'company') {
-            $order->employee_id = null;
-            $order->company_id = $user->company_id;
-            $order->order_by = 'company'; // 👈 Set by company
-
-        } elseif ($user->role === 'company_subadmin') {
-            $order->employee_id = null;
-            $order->company_id = $user->company_id;
-            $order->order_by = 'company_subadmin'; // 👈 Set by subadmin
-            $order->subadmin_id = $user->id; // 👈 Save subadmin's ID
-        }
-
-
-
-        $order->fill($request->only([
-            'blue_light_protection',
-            'order_type',
-            'lense_material',
-            'scratch_coating',
-            'lens_tint',
-            'lens_protection',
-            'payment_method',
-            'shipping_status',
-            'product_id',
-            'product_quantity',
-            'net_total',
-            'paid_amount_via_card',
-            'paid_amount_via_benefit',
-            'frame_size',
-            'variant_id'
-        ]));
-
-        if ($request->payment_method === 'Online Payment') {
-            $order->payment_status = 'Unpaid';
-        } else if ($order->payment_method === 'Benefit Amount + Online Payment') {
-            $order->payment_status = 'Unpaid';
-        } else if ($order->payment_method === 'Benefit Amount + Credit Card') {
-            $order->payment_status = 'Paid';
-        } else if ($order->payment_method === 'Credit Card') {
-            $order->payment_status = 'Paid';
-        } else if ($order->payment_method === 'Benefit Amount') {
-            $order->payment_status = 'Paid';
-        }
-
-        $order->order_status = 'Pending';
-
-        $order->prescription_id = $pres->id;
-
-        // Generate custom sequential confirmation number starting from 10001
-        $lastOrder = Order::whereNotNull('order_confirmation_number')
-            ->orderBy('order_confirmation_number', 'desc')
-            ->first();
-
-        if ($lastOrder) {
-            $nextConfirmationNumber = $lastOrder->order_confirmation_number + 1;
-        } else {
-            $nextConfirmationNumber = 100021;
-        }
-
-        $order->order_confirmation_number = $nextConfirmationNumber;
-
-        // Save order
-        $order->save();
-
-
-        $shipping = new ShippingAddress();
-        $shipping->fill([
-            'first_name' => $request->input('shipping_first_name'),
-            'last_name' => $request->input('shipping_last_name'),
-            'email' => $request->input('shipping_email'),
-            'country' => $request->input('shipping_country'),
-            'state' => $request->input('shipping_state'),
-            'city' => $request->input('shipping_city'),
-            'address' => $request->input('shipping_address'),
-            'second_address' => $request->input('shipping_second_address'),
-            'zip_postal_code' => $request->input('shipping_zip_postal_code'),
-            'phone_number' => $request->input('shipping_phone_number'),
-            'additional_information' => $request->input('shipping_additional_information'),
-        ]);
-
-        $shipping->order_id = $order->id;
-        $shipping->save();
-
-        $billing = new BillingAddress();
-        $billing->fill([
-            'first_name' => $request->input('billing_first_name'),
-            'last_name' => $request->input('billing_last_name'),
-            'email' => $request->input('billing_email'),
-            'country' => $request->input('billing_country'),
-            'state' => $request->input('billing_state'),
-            'city' => $request->input('billing_city'),
-            'address' => $request->input('billing_address'),
-            'second_address' => $request->input('billing_second_address'),
-            'zip_postal_code' => $request->input('billing_zip_postal_code'),
-            'phone_number' => $request->input('billing_phone_number'),
-        ]);
-
-        $billing->order_id = $order->id;
-        $billing->save();
-
-        if ($request->payment_method === 'Online Payment') {
-            try {
-                Stripe::setApiKey(config('services.stripe.secret'));
-
-                if ($request->net_total <= 0) {
-                    throw new \Exception("Invoice amount must be greater than $0.00");
-                }
-
-                $customer = Customer::create([
-                    'email' => $request->billing_email,
-                    'name'  => "{$request->billing_first_name} {$request->billing_last_name}",
-                    'phone' => $request->billing_phone_number,
-                    'address' => [
-                        'line1' => $request->billing_address,
-                        'line2' => $request->billing_second_address ?? '',
-                        'city' => $request->billing_city,
-                        'state' => $request->billing_state,
-                        'country' => $request->billing_country,
-                        'postal_code' => $request->billing_zip_postal_code,
-                    ],
-                ]);
-
-                $invoice = Invoice::create([
-                    'customer' => $customer->id,
-                    'collection_method' => 'send_invoice',
-                    'days_until_due' => 30,
-                    'auto_advance' => false, // Disable automatic email sending
-                    'description' => 'Order #' . $order->id,
-                ]);
-
-                InvoiceItem::create([
-                    'customer' => $customer->id,
-                    'amount' => $request->net_total * 100,
-                    'currency' => 'usd',
-                    'description' => 'Order Payment',
-                    'invoice' => $invoice->id,
-                ]);
-
-                $finalInvoice = Invoice::retrieve($invoice->id)->finalizeInvoice();
-
-                $order->update([
-                    'stripe_invoice_id' => $finalInvoice->id,
-                    'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
-                ]);
-                $this->deleteEmployeeOrderDetails($employeeId);
-            } catch (\Exception $e) {
-                Log::error('Stripe Invoice Error: ' . $e->getMessage());
-                return response()->json(['error' => 'Failed to create Stripe invoice.'], 500);
-            }
-        }
-        // Case 2: Benefit + Credit
-        elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
-            try {
-                $user = auth('sanctum')->user();
-                $remainingAmount = $request->net_total;
-
-                if ($user->role === 'employee') {
-                    $employee = Employee::findOrFail($employeeId);
-                    $deductionAmount = min($employee->benefit_amount, $remainingAmount);
-
-                    if ($deductionAmount > 0) {
-                        $employee->benefit_amount -= $deductionAmount;
-                        $employee->save();
-
-                        Transaction::create([
-                            'employee_id' => $employeeId,
-                            'transaction_type' => 'debit',
-                            'amount' => $deductionAmount,
-                            'balance' => $employee->benefit_amount,
-                            'description' => 'Order payment from benefit',
-                        ]);
-
-                        $this->deleteEmployeeOrderDetails($employeeId);
-                        $remainingAmount -= $deductionAmount;
-                    }
-                } elseif ($user->role === 'company' || $user->role === 'company_subadmin') {
-                    $companyId = $user->company_id;
-                    $company = Company::findOrFail($companyId);
-                    $deductionAmount = min($company->benefit_amount, $remainingAmount);
-
-                    if ($deductionAmount > 0) {
-                        $company->benefit_amount -= $deductionAmount;
-                        $company->save();
-
-                        $transactionData = [
-                            'company_id' => $companyId,
-                            'transaction_type' => 'debit',
-                            'amount' => $deductionAmount,
-                            'balance' => $company->benefit_amount,
-                            'description' => 'order place on belhaf of benefits amount and pay later'
-                        ];
-
-                        if ($user->role === 'company_subadmin') {
-                            $transactionData['subadmin_id'] = $user->id;
-                        }
-
-                        Transaction::create($transactionData);
-                        $this->deleteCompanyOrderDetails($companyId);
-                        $remainingAmount -= $deductionAmount;
-                    }
-                }
-
-                if ($remainingAmount > 0) {
-                    try {
-                        Stripe::setApiKey(config('services.stripe.secret'));
-
-                        $customer = Customer::create([
-                            'email' => $request->billing_email,
-                            'name'  => "{$request->billing_first_name} {$request->billing_last_name}",
-                            'phone' => $request->billing_phone_number,
-                            'address' => [
-                                'line1' => $request->billing_address,
-                                'line2' => $request->billing_second_address ?? '',
-                                'city' => $request->billing_city,
-                                'state' => $request->billing_state,
-                                'country' => $request->billing_country,
-                                'postal_code' => $request->billing_zip_postal_code,
-                            ],
-                        ]);
-
-                        $invoice = Invoice::create([
-                            'customer' => $customer->id,
-                            'collection_method' => 'send_invoice',
-                            'days_until_due' => 30,
-                            'auto_advance' => false, // Disable automatic email sending
-                            'description' => 'Order #' . $order->id . ' (Partial Benefit Payment)',
-                        ]);
-
-                        InvoiceItem::create([
-                            'customer' => $customer->id,
-                            'amount' => $remainingAmount * 100,
-                            'currency' => 'usd',
-                            'description' => 'Remaining Order Payment',
-                            'invoice' => $invoice->id,
-                        ]);
-
-                        $finalInvoice = Invoice::retrieve($invoice->id)->finalizeInvoice();
-
-                        $order->update([
-                            'stripe_invoice_id' => $finalInvoice->id,
-                            'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::error('Stripe Partial Invoice Error: ' . $e->getMessage());
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::error('Payment Error: ' . $e->getMessage());
-                return response()->json(['error' => 'Failed to process payment.'], 500);
-            }
-        } else {
-            try {
-
-                $user = auth('sanctum')->user();
-
-                if ($user->role === 'employee') {
-                    $employeeId = $user->employee_id;
-
-                    $employee = Employee::findOrFail($employeeId);
-                    $deductionAmount = $request->net_total;
-
-                    if ($employee->benefit_amount < $deductionAmount) {
-                        $deductionAmount = $employee->benefit_amount;
-                    }
-
-                    $employee->benefit_amount -= $deductionAmount;
-                    $employee->save();
-
-                    $this->deleteEmployeeOrderDetails($employeeId);
-
-                    Transaction::create([
-                        'employee_id' => $employeeId,
-                        'transaction_type' => 'debit',
-                        'amount' => $deductionAmount,
-                        'balance' => $employee->benefit_amount,
-                        'description' => 'Order payment from benefit',
-                    ]);
-                } elseif ($user->role === 'company') {
-                    $companyId = $user->company_id;
-
-                    $company = Company::findOrFail($companyId);
-                    $deductionAmount = $request->net_total;
-
-                    if ($company->benefit_amount < $deductionAmount) {
-                        $deductionAmount = $company->benefit_amount;
-                    }
-
-                    $company->benefit_amount -= $deductionAmount;
-                    $company->save();
-
-                    $this->deleteCompanyOrderDetails($companyId);
-
-
-                    Transaction::create([
-                        'company_id' => $companyId,
-                        'transaction_type' => 'debit',
-                        'amount' => $deductionAmount,
-                        'balance' => $company->balance,
-                        'description' => 'Order payment from company balance',
-                    ]);
-                } elseif ($user->role === 'company_subadmin') {
-                    $companyId = $user->company_id;
-
-                    $company = Company::findOrFail($companyId);
-                    $deductionAmount = $request->net_total;
-
-                    if ($company->benefit_amount < $deductionAmount) {
-                        $deductionAmount = $company->benefit_amount;
-                    }
-
-                    $company->benefit_amount -= $deductionAmount;
-                    $company->save();
-
-                    $this->deleteCompanyOrderDetails($companyId);
-
-                    Transaction::create([
-                        'company_id' => $companyId,
-                        'subadmin_id' => $user->id, // 👈 Save subadmin's ID
-                        'transaction_type' => 'debit',
-                        'amount' => $deductionAmount,
-                        'balance' => $company->benefit_amount,
-                        'description' => 'Order payment by subadmin from company balance',
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Benefit Payment Error: ' . $e->getMessage());
-                return response()->json(['error' => 'Failed to process benefit payment.'], 500);
-            }
-        }
-
-
-        $role = auth('sanctum')->user()->role;
-        $user = auth('sanctum')->user();
-
-
-        if ($role === 'employee') {
-            $user = User::where('role', 'employee')->where('employee_id', $employeeId)->first();
-            $email = $user->email;
-            $company = User::where('role', 'company')->where('company_id', $user->company_id)->first();
-            $CompMail = $company->email;
-            Mail::to($CompMail)->send(new OrderConfirmationMail($order));
-        } elseif ($role === 'company') {
-            $user = User::where('role', 'company')->where('company_id', $companyId)->first();
-            $email = $user->email;
-        } elseif ($role === 'company_subadmin') {
-            $user = User::where('role', 'company_subadmin')->where('id', $user->id)->first();
-            $email = $user->email;
-            $company = User::where('role', 'company')->where('company_id', $user->company_id)->first();
-            $CompMail = $company->email;
-            Mail::to($CompMail)->send(new OrderConfirmationMail($order));
-        }
-
-
-
-        Mail::to($email)->send(new OrderConfirmationMail($order));
-
-
-        // Mail to Super Admin (assumed ID = 1)
-        $owner = User::find(1);
-        if ($owner) {
-            Mail::to($owner->email)->send(new OrderMailToSeg($order->id));
-        }
-
-
+        DB::beginTransaction();
 
         try {
-            Mail::to($request->billing_email)->send(new InoviceMail($order->id));
-        } catch (\Exception $e) {
-            Log::error("Failed to send invoice mail for Order ID: {$order->id}. Error: " . $e->getMessage());
-        }
+            $user = auth('sanctum')->user();
+            $employeeId = $user->employee_id;
+            $companyId = $user->company_id;
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Order and prescription details saved successfully.',
-            'order_confire' => $order->order_confirmation_number,
-            'order_id' => $order->id,
-            'prescription_id' => $pres->id,
-        ]);
+            // ✅ Store prescription and order
+            $pres = $this->storePrescriptionDetails($request, $user);
+            $order = $this->storeOrderDetails($request, $user, $pres->id);
+            $this->storeAddressDetails($request, $order->id);
+
+            // ✅ Handle payment methods
+            if ($request->payment_method === 'Online Payment') {
+                $this->handleOnlinePayment($request, $order, $employeeId);
+            } elseif ($request->payment_method === 'Benefit Amount + Online Payment') {
+                $this->handleBenefitAndOnlinePayment($request, $order, $user);
+            } elseif ($request->payment_method === 'Free Order') {
+                $this->handleFreeOrder($request, $order, $user);
+            } else {
+                $this->handleBenefitOnlyPayment($request, $order, $user);
+            }
+
+            // ✅ Send order-related emails
+            $this->sendOrderMails($order, $request);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Order and prescription details saved successfully.',
+                'order_confire' => $order->order_confirmation_number,
+                'order_id' => $order->id,
+                'prescription_id' => $pres->id,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error saving order and prescription: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong while processing the order.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
+
+
     public function existingPresOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -625,7 +163,7 @@ class OrderController extends Controller
 
         $employeeId = auth('sanctum')->user()->employee_id;
         $companyId = auth('sanctum')->user()->company_id;
-
+        $user = auth('sanctum')->user();
 
         $latestPrescription = PrecriptionDetails::where('employee_id', $employeeId)->latest()->first();
 
@@ -859,6 +397,8 @@ class OrderController extends Controller
                 Log::error('Payment Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to process payment.'], 500);
             }
+        } elseif ($request->payment_method === 'Free Order') {
+            $this->handleFreeOrder($request, $order, $user);
         } else {
             try {
                 $employee = Employee::findOrFail($employeeId);
@@ -868,10 +408,13 @@ class OrderController extends Controller
                     $deductionAmount = $employee->benefit_amount;
                 }
 
+                // Step 1: Deduct the order amount
                 $employee->benefit_amount -= $deductionAmount;
                 $employee->save();
+
                 $this->deleteEmployeeOrderDetails($employeeId);
 
+                // Step 2: Save the actual order payment transaction
                 Transaction::create([
                     'employee_id' => $employeeId,
                     'transaction_type' => 'debit',
@@ -879,11 +422,27 @@ class OrderController extends Controller
                     'balance' => $employee->benefit_amount,
                     'description' => 'Order payment from benefit',
                 ]);
+
+                // Step 3: Trash the remaining benefit amount if any
+                if ($employee->benefit_amount > 0) {
+                    $trashedAmount = $employee->benefit_amount;
+                    $employee->benefit_amount = 0;
+                    $employee->save();
+
+                    Transaction::create([
+                        'employee_id' => $employeeId,
+                        'transaction_type' => 'debit',
+                        'amount' => $trashedAmount,
+                        'balance' => 0,
+                        'description' => 'Remaining benefit amount has been trashed',
+                    ]);
+                }
             } catch (\Exception $e) {
                 Log::error('Benefit Payment Error: ' . $e->getMessage());
                 return response()->json(['error' => 'Failed to process benefit payment.'], 500);
             }
         }
+
 
 
 
@@ -908,7 +467,7 @@ class OrderController extends Controller
         Mail::to($CompMail)->send(new OrderConfirmationMail($order));
 
 
-        // Mail to Super Admin (assumed ID = 1)
+
         $owner = User::find(1);
         if ($owner) {
             Mail::to($owner->email)->send(new OrderMailToSeg($order->id));
@@ -930,6 +489,10 @@ class OrderController extends Controller
             'prescription_id' => $latestPrescription->id,
         ]);
     }
+
+
+
+
     public function postpdonline(Request $request)
     {
         try {
@@ -964,7 +527,6 @@ class OrderController extends Controller
         }
     }
 
-
     public function companylist(Request $request)
     {
 
@@ -975,6 +537,10 @@ class OrderController extends Controller
         ]);
     }
 
+
+
+
+    //function for deleting employe tem order details 
     public function deleteEmployeeOrderDetails($employeeId)
     {
 
@@ -997,8 +563,7 @@ class OrderController extends Controller
 
         $orderDetails->delete();
     }
-
-
+    // function deleting company temp order details
     public function deleteCompanyOrderDetails($companyId)
     {
         $orderDetails = CompanyTempOrderdetail::where('company_id', $companyId)->first();
@@ -1017,9 +582,7 @@ class OrderController extends Controller
 
         $orderDetails->delete();
     }
-
-
-
+    //function for uploading images 
     private function uploadImages($image, $directory = 'products')
     {
         $destinationPath = public_path("projectimages/{$directory}");
@@ -1039,9 +602,10 @@ class OrderController extends Controller
             dd("Image move failed: $fileName");
         }
     }
+    // only getting order for employee
     public function getEmployeeOrders(Request $request)
     {
-        $baseUrl = env('BASE_URL'); // Assuming this is your media URL for images
+        $baseUrl = env('BASE_URL');
         $EmplyeeId = auth('sanctum')->user()->employee_id;
 
         $orders = Order::where('employee_id', $EmplyeeId)
@@ -1071,14 +635,10 @@ class OrderController extends Controller
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
-
             if ($order->company) {
                 $order->company_data->company_name = $order->company->company_name;
             }
-
             unset($order->company); // remove original relation if needed
-
-
             return $order;
         });
 
@@ -1090,6 +650,7 @@ class OrderController extends Controller
             'data' => $orders
         ]);
     }
+    //getting order of company and company subadmin
     public function getCompanyOrders(Request $request)
     {
         $baseUrl = env('BASE_URL'); // Assuming this is your media URL for images
@@ -1121,7 +682,6 @@ class OrderController extends Controller
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
-
             // Add subadmin_id inside companysubadmin object safely
             if ($order->companysubadmin) {
                 $order->companysubadmin->subadmin_id = $order->companysubadmin->id;
@@ -1129,22 +689,16 @@ class OrderController extends Controller
             if ($order->company) {
                 $order->company_data->company_name = $order->company->company_name;
             }
-
             unset($order->company); // remove original relation if needed
-
-
             return $order;
         });
-
-
-
-
         return response()->json([
             'status' => true,
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
     }
+    // getting all order for owner and seg_admin
     public function getAllOrders(Request $request)
     {
         $baseUrl = env('BASE_URL');
@@ -1174,30 +728,22 @@ class OrderController extends Controller
             $order->order_points = $order->orderPoints->pluck('point')->toArray(); // convert to array of strings
             unset($order->orderPoints); // remove original relation if needed
             unset($order->product->manufacturer_name); // remove original relation if needed
-
             if ($order->companysubadmin) {
                 $order->companysubadmin->subadmin_id = $order->companysubadmin->id;
             }
-
             if ($order->company) {
                 $order->company_data->company_name = $order->company->company_name;
             }
-
             unset($order->company); // remove original relation if needed
-
             return $order;
         });
-
-
         return response()->json([
             'status' => true,
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
     }
-
-
-
+    //owner is updateing the status of owner 
     public function updateOrderStatus(Request $request)
     {
         try {
@@ -1219,6 +765,7 @@ class OrderController extends Controller
             return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
         }
     }
+    //also her owner is updating status
     public function updateOrder(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -1452,6 +999,7 @@ class OrderController extends Controller
             'prescription_id' => $pres->id,
         ]);
     }
+    // update tray id and time
     public function update_tray_id(Request $request, $id)
     {
         try {
@@ -1490,162 +1038,564 @@ class OrderController extends Controller
             );
         }
     }
-    public function updateuuOrder(Request $request, $id)
+
+
+    //validaion for new prescription oreder 
+    private function validateNewPresOrder(Request $request)
     {
-        try {
-            $request->validate([
-                'order_type' => 'nullable|string',
-                'frame_type' => 'nullable|string',
-                'frame_prescription' => 'nullable|string',
-                'blue_light_protection' => 'nullable|string',
-                'frame_prescription_type' => 'nullable|string',
-                'prescription_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-                'lense_sizes' => 'nullable|string',
-                'od_left_sphere' => 'nullable|string',
-                'od_left_cylinders' => 'nullable|string',
-                'od_left_axis' => 'nullable|string',
-                'od_left_nv_add' => 'nullable|string',
-                'od_left_2_pds' => 'nullable|string',
-                'od_right_sphere' => 'nullable|string',
-                'od_right_cylinders' => 'nullable|string',
-                'od_right_axis' => 'nullable|string',
-                'od_right_nv_add' => 'nullable|string',
-                'od_right_2_pds' => 'nullable|string',
-                'lense_use' => 'nullable|string',
-                'frame_picture' => 'nullable|image|max:2048',
-                'product_details' => 'nullable|string',
-                'lense_material' => 'nullable|string',
-                'scratch_coating' => 'nullable|string',
-                'lens_tint' => 'nullable|string',
-                'lens_protection' => 'nullable|string',
-                'order_status' => 'nullable|string',
-                'update_points' => 'nullable|array'
-            ]);
+        return Validator::make($request->all(), [
+            'blue_light_protection' => 'nullable|string',
+            'order_type' => 'nullable|string|max:255',
+            'lense_material' => 'nullable|string|max:255',
+            'scratch_coating' => 'nullable',
+            'lens_tint' => 'nullable|string|max:255',
+            'lens_protection' => 'nullable|string|max:255',
+            // Billing details
+            'billing_first_name' => 'required|string|max:255',
+            'billing_last_name' => 'required|string|max:255',
+            'billing_email' => 'required|email|max:255',
+            'billing_country' => 'required|string|max:255',
+            'billing_city' => 'required|string|max:255',
+            'billing_state' => 'required|string|max:255',
+            'billing_address' => 'required|string|max:1000',
+            'billing_second_address' => 'nullable|string|max:1000',
+            'billing_zip_postal_code' => 'required|string|max:20',
+            'billing_phone_number' => 'required|string|max:20',
+            // Shipping details
+            'shipping_first_name' => 'required|string|max:255',
+            'shipping_last_name' => 'required|string|max:255',
+            'shipping_email' => 'required|email|max:255',
+            'shipping_country' => 'required|string|max:255',
+            'shipping_city' => 'required|string|max:255',
+            'shipping_state' => 'required|string|max:255',
+            'shipping_address' => 'required|string|max:1000',
+            'shipping_second_address' => 'nullable|string|max:1000',
+            'shipping_zip_postal_code' => 'required|string|max:20',
+            'shipping_phone_number' => 'required|string|max:20',
+            'shipping_additional_information' => 'nullable|string|max:255',
+            'payment_method' => 'required|string|max:100',
+            'shipping_status' => 'required|string|max:100',
 
-            $order = Order::findOrFail($id);
-
-            // Handle prescription image
-            $prescriptionImage = $order->prescription_image;
-            if ($request->hasFile('prescription_image')) {
-                $oldPrescriptionPath = public_path($order->prescription_image);
-                if ($order->prescription_image && file_exists($oldPrescriptionPath)) {
-                    unlink($oldPrescriptionPath);
-                }
-
-                $file = $request->file('prescription_image');
-                $originalName = $file->getClientOriginalName();
-                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-                $destinationPath = public_path('projectimages/orders/prescriptions');
-
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-                $file->move($destinationPath, $fileName);
-                $prescriptionImage = '/projectimages/orders/prescriptions/' . $fileName;
-            }
-
-            // Handle frame picture
-            $framePicture = $order->frame_picture;
-            if ($request->hasFile('frame_picture')) {
-                $oldFramePath = public_path($order->frame_picture);
-                if ($order->frame_picture && file_exists($oldFramePath)) {
-                    unlink($oldFramePath);
-                }
-                $file = $request->file('frame_picture');
-                $originalName = $file->getClientOriginalName();
-                $fileName = time() . '_' . preg_replace('/\s+/', '_', $originalName);
-                $destinationPath = public_path('projectimages/orders/frames');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-                $file->move($destinationPath, $fileName);
-                $framePicture = '/projectimages/orders/frames/' . $fileName;
-            }
-
-            // Update order fields only if present in request
-            $order->update([
-                'order_type' => $request->input('order_type', $order->order_type),
-                'frame_type' => $request->input('frame_type', $order->frame_type),
-                'frame_prescription' => $request->input('frame_prescription', $order->frame_prescription),
-                'blue_light_protection' => $request->input('blue_light_protection', $order->blue_light_protection),
-                'frame_prescription_type' => $request->input('frame_prescription_type', $order->frame_prescription_type),
-                'prescription_image' => $prescriptionImage,
-                'lense_sizes' => $request->input('lense_sizes', $order->lense_sizes),
-                'od_left_sphere' => $request->input('od_left_sphere', $order->od_left_sphere),
-                'od_left_cylinders' => $request->input('od_left_cylinders', $order->od_left_cylinders),
-                'od_left_axis' => $request->input('od_left_axis', $order->od_left_axis),
-                'od_left_nv_add' => $request->input('od_left_nv_add', $order->od_left_nv_add),
-                'od_left_2_pds' => $request->input('od_left_2_pds', $order->od_left_2_pds),
-                'od_right_sphere' => $request->input('od_right_sphere', $order->od_right_sphere),
-                'od_right_cylinders' => $request->input('od_right_cylinders', $order->od_right_cylinders),
-                'od_right_axis' => $request->input('od_right_axis', $order->od_right_axis),
-                'od_right_nv_add' => $request->input('od_right_nv_add', $order->od_right_nv_add),
-                'od_right_2_pds' => $request->input('od_right_2_pds', $order->od_right_2_pds),
-                'lense_use' => $request->input('lense_use', $order->lense_use),
-                'frame_picture' => $framePicture,
-                'product_details' => $request->input('product_details', $order->product_details),
-                'lense_material' => $request->input('lense_material', $order->lense_material),
-                'scratch_coating' => $request->input('scratch_coating', $order->scratch_coating),
-                'lens_tint' => $request->input('lens_tint', $order->lens_tint),
-                'lens_protection' => $request->input('lens_protection', $order->lens_protection),
-                'order_status' => $request->input('order_status', $order->order_status),
-            ]);
-
-            if ($request->has('update_points') && is_array($request->update_points)) {
-                foreach ($request->update_points as $point) {
-                    ChangesPoints::create([
-                        'order_id' => $order->id,
-                        'point' => $point
-                    ]);
-                }
-            }
-
-            return $this->successResponse(['model' => 'orders'], 'Order updated successfully', [
-                'order' => $order,
-            ]);
-        } catch (\Exception $e) {
-            return $this->errorResponse(['model' => 'orders'], $e->getMessage(), [], 422);
-        }
+            'product_id' => 'required|integer',
+            'variant_id' => 'required|integer',
+            'frame_size' => 'required',
+            'product_quantity' => 'required|integer|min:1',
+            'net_total' => 'required|numeric|min:0',
+            'paid_amount_via_benefit' => 'nullable|numeric|min:0',
+            'paid_amount_via_card' => 'nullable|numeric|min:0',
+            // Prescription fields
+            'frame_type' => 'required|string|max:255',
+            'frame_prescription' => 'required|string|max:255',
+            'prescription_image' => 'nullable|image|max:2048',
+            'od_left_sphere' => 'nullable|string|max:10',
+            'od_left_cylinders' => 'nullable|string|max:10',
+            'od_left_axis' => 'nullable|string|max:10',
+            'od_left_nv_add' => 'nullable|string|max:10',
+            'od_left_2_pds' => 'nullable|string|max:10',
+            'od_right_sphere' => 'nullable|string|max:10',
+            'od_right_cylinders' => 'nullable|string|max:10',
+            'od_right_axis' => 'nullable|string|max:10',
+            'od_right_nv_add' => 'nullable|string|max:10',
+            'od_right_2_pds' => 'nullable|string|max:10',
+            'pupil_distance' => 'nullable|string',
+            'frame_picture' => 'nullable|image|max:2048',
+            'pupil_distance_online' => 'nullable|string',
+            'od_left_2_pds_online' => 'nullable|string|max:10',
+            'od_right_2_pds_online' => 'nullable|string|max:10',
+            'vertical_right' => 'nullable|string',
+            'vertical_left' => 'nullable|string',
+            'vertical_base_direction_right' => 'nullable|string',
+            'vertical_base_direction_left' => 'nullable|string',
+            'horizontal_rigth' => 'nullable|string',
+            'horizontal_left' => 'nullable|string',
+            'horizontal_base_direction_right' => 'nullable|string',
+            'horizontal_base_direction_left' => 'nullable|string',
+            'special_notes' => 'nullable|string',
+        ]);
     }
+    // saving prescription details of new order
+    private function storePrescriptionDetails(Request $request, $user)
+    {
+        $pres = new PrecriptionDetails();
 
-    public function updateStripeOrderStatuses()
+        if ($user->role === 'employee') {
+            $pres->employee_id = $user->employee_id;
+        } elseif (in_array($user->role, ['company', 'company_subadmin'])) {
+            $pres->company_id = $user->company_id;
+        }
+
+        $pres->fill($request->only([
+            'frame_type',
+            'frame_prescription',
+            'od_left_sphere',
+            'od_left_cylinders',
+            'od_left_axis',
+            'od_left_nv_add',
+            'od_left_2_pds',
+            'od_right_sphere',
+            'od_right_cylinders',
+            'od_right_axis',
+            'od_right_nv_add',
+            'od_right_2_pds',
+            'pupil_distance',
+            'pupil_distance_online',
+            'od_left_2_pds_online',
+            'od_right_2_pds_online',
+            'vertical_right',
+            'vertical_left',
+            'vertical_base_direction_right',
+            'vertical_base_direction_left',
+            'horizontal_rigth',
+            'horizontal_left',
+            'horizontal_base_direction_right',
+            'horizontal_base_direction_left',
+            'special_notes',
+        ]));
+
+        if ($request->hasFile('prescription_image')) {
+            $pres->prescription_image = $this->uploadImages($request->file('prescription_image'), 'prescriptions');
+        }
+
+        if ($request->hasFile('frame_picture')) {
+            $pres->frame_picture = $this->uploadImages($request->file('frame_picture'), 'frames');
+        }
+
+        $pres->save();
+
+        return $pres;
+    }
+    //save order details or new order 
+    private function storeOrderDetails(Request $request, $user, $prescriptionId)
+    {
+        $order = new Order();
+
+        if ($user->role === 'employee') {
+            $order->employee_id = $user->employee_id;
+            $order->company_id = $user->company_id;
+            $order->order_by = 'employee';
+        } elseif ($user->role === 'company') {
+            $order->company_id = $user->company_id;
+            $order->employee_id = null;
+            $order->order_by = 'company';
+        } elseif ($user->role === 'company_subadmin') {
+            $order->company_id = $user->company_id;
+            $order->employee_id = null;
+            $order->order_by = 'company_subadmin';
+            $order->subadmin_id = $user->id;
+        }
+
+        $order->fill($request->only([
+            'blue_light_protection',
+            'order_type',
+            'lense_material',
+            'scratch_coating',
+            'lens_tint',
+            'lens_protection',
+            'payment_method',
+            'shipping_status',
+            'product_id',
+            'product_quantity',
+            'net_total',
+            'paid_amount_via_card',
+            'paid_amount_via_benefit',
+            'frame_size',
+            'variant_id'
+        ]));
+
+        $paymentMethod = $request->payment_method;
+
+        if (in_array($paymentMethod, ['Online Payment', 'Benefit Amount + Online Payment'])) {
+            $order->payment_status = 'Unpaid';
+        } else {
+            $order->payment_status = 'Paid';
+        }
+
+        $order->order_status = 'Pending';
+        $order->prescription_id = $prescriptionId;
+
+        // Custom order confirmation number
+        $lastOrder = Order::whereNotNull('order_confirmation_number')
+            ->orderBy('order_confirmation_number', 'desc')
+            ->first();
+
+        $order->order_confirmation_number = $lastOrder
+            ? $lastOrder->order_confirmation_number + 1
+            : 100021;
+
+        $order->save();
+
+        return $order;
+    }
+    //store the address details or order 
+    private function storeAddressDetails(Request $request, $orderId)
+    {
+        // Shipping Address
+        $shipping = new ShippingAddress();
+        $shipping->fill([
+            'first_name' => $request->input('shipping_first_name'),
+            'last_name' => $request->input('shipping_last_name'),
+            'email' => $request->input('shipping_email'),
+            'country' => $request->input('shipping_country'),
+            'state' => $request->input('shipping_state'),
+            'city' => $request->input('shipping_city'),
+            'address' => $request->input('shipping_address'),
+            'second_address' => $request->input('shipping_second_address'),
+            'zip_postal_code' => $request->input('shipping_zip_postal_code'),
+            'phone_number' => $request->input('shipping_phone_number'),
+            'additional_information' => $request->input('shipping_additional_information'),
+        ]);
+        $shipping->order_id = $orderId;
+        $shipping->save();
+
+        // Billing Address
+        $billing = new BillingAddress();
+        $billing->fill([
+            'first_name' => $request->input('billing_first_name'),
+            'last_name' => $request->input('billing_last_name'),
+            'email' => $request->input('billing_email'),
+            'country' => $request->input('billing_country'),
+            'state' => $request->input('billing_state'),
+            'city' => $request->input('billing_city'),
+            'address' => $request->input('billing_address'),
+            'second_address' => $request->input('billing_second_address'),
+            'zip_postal_code' => $request->input('billing_zip_postal_code'),
+            'phone_number' => $request->input('billing_phone_number'),
+        ]);
+        $billing->order_id = $orderId;
+        $billing->save();
+    }
+    // store payment details 
+    private function handleOnlinePayment($request, $order, $employeeId)
     {
         try {
             Stripe::setApiKey(config('services.stripe.secret'));
 
-            $orders = Order::whereIn('payment_method', ['Online Payment', 'Benefit Amount + Online Payment'])
-                ->whereNotNull('stripe_invoice_id')
-                ->where('payment_status', '!=', 'Paid')
-                ->get();
+            if ($request->net_total <= 0) {
+                throw new \Exception("Invoice amount must be greater than $0.00");
+            }
 
-            $updatedCount = 0;
+            $customer = Customer::create([
+                'email' => $request->billing_email,
+                'name'  => "{$request->billing_first_name} {$request->billing_last_name}",
+                'phone' => $request->billing_phone_number,
+                'address' => [
+                    'line1' => $request->billing_address,
+                    'line2' => $request->billing_second_address ?? '',
+                    'city' => $request->billing_city,
+                    'state' => $request->billing_state,
+                    'country' => $request->billing_country,
+                    'postal_code' => $request->billing_zip_postal_code,
+                ],
+            ]);
 
-            foreach ($orders as $order) {
-                try {
-                    $invoice = Invoice::retrieve($order->stripe_invoice_id);
+            $invoice = Invoice::create([
+                'customer' => $customer->id,
+                'collection_method' => 'send_invoice',
+                'days_until_due' => 30,
+                'auto_advance' => false, // Disable automatic email sending
+                'description' => 'Order #' . $order->id,
+            ]);
 
-                    if ($invoice->status === 'paid') {
-                        $order->payment_status = 'Paid';
-                        $order->save();
+            InvoiceItem::create([
+                'customer' => $customer->id,
+                'amount' => $request->net_total * 100,
+                'currency' => 'usd',
+                'description' => 'Order Payment',
+                'invoice' => $invoice->id,
+            ]);
+            $finalInvoice = Invoice::retrieve($invoice->id)->finalizeInvoice();
 
-                        Log::info("Order #{$order->id} marked as Paid.");
-                        $updatedCount++;
+            $order->update([
+                'stripe_invoice_id' => $finalInvoice->id,
+                'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
+            ]);
+
+            $this->deleteEmployeeOrderDetails($employeeId);
+        } catch (\Exception $e) {
+            Log::error('Stripe Invoice Error: ' . $e->getMessage());
+            throw new \Exception('Failed to create Stripe invoice.');
+        }
+    }
+    //handale benefit and online 
+    private function handleBenefitAndOnlinePayment($request, $order, $user)
+    {
+        try {
+            $remainingAmount = $request->net_total;
+
+            if ($user->role === 'employee') {
+                $employee = Employee::findOrFail($user->employee_id);
+                $deductionAmount = min($employee->benefit_amount, $remainingAmount);
+                if ($deductionAmount > 0) {
+                    $employee->benefit_amount -= $deductionAmount;
+                    $employee->save();
+                    Transaction::create([
+                        'employee_id' => $employee->id,
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $employee->benefit_amount,
+                        'description' => 'Order payment from benefit',
+                    ]);
+                    $this->deleteEmployeeOrderDetails($employee->id);
+                    $remainingAmount -= $deductionAmount;
+                }
+            } elseif (in_array($user->role, ['company', 'company_subadmin'])) {
+                $company = Company::findOrFail($user->company_id);
+                $deductionAmount = min($company->benefit_amount, $remainingAmount);
+                if ($deductionAmount > 0) {
+                    $company->benefit_amount -= $deductionAmount;
+                    $company->save();
+
+                    $transactionData = [
+                        'company_id' => $company->id,
+                        'transaction_type' => 'debit',
+                        'amount' => $deductionAmount,
+                        'balance' => $company->benefit_amount,
+                        'description' => 'order place on belhaf of benefits amount and pay later',
+                    ];
+                    if ($user->role === 'company_subadmin') {
+                        $transactionData['subadmin_id'] = $user->id;
                     }
-                } catch (\Exception $e) {
-                    Log::error("Stripe Invoice Error for Order ID {$order->id}: " . $e->getMessage());
+
+                    Transaction::create($transactionData);
+                    $this->deleteCompanyOrderDetails($company->id);
+                    $remainingAmount -= $deductionAmount;
                 }
             }
 
-            return response()->json([
-                'message' => 'Stripe invoice check completed.',
-                'updated_orders' => $updatedCount
-            ]);
+            if ($remainingAmount > 0) {
+                $this->createStripeInvoice($request, $order, $remainingAmount, true);
+            }
         } catch (\Exception $e) {
-            Log::error('Stripe API Error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'An error occurred while checking Stripe invoices.',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Benefit + Online Payment Error: ' . $e->getMessage());
+            throw new \Exception('Failed to process partial benefit payment.');
+        }
+    }
+    private function handleBenefitOnlyPayment($request, $order, $user)
+    {
+        try {
+            $deductionAmount = $request->net_total;
+
+            if ($user->role === 'employee') {
+                $employee = Employee::findOrFail($user->employee_id);
+
+                // Step 1: Deduct the order amount
+                $paymentAmount = min($employee->benefit_amount, $deductionAmount);
+                $employee->benefit_amount -= $paymentAmount;
+                $employee->save();
+
+                $this->deleteEmployeeOrderDetails($employee->id);
+
+                // Step 2: Save the actual order payment transaction
+                Transaction::create([
+                    'employee_id' => $employee->id,
+                    'transaction_type' => 'debit',
+                    'amount' => $paymentAmount,
+                    'balance' => $employee->benefit_amount,
+                    'description' => 'Order payment from benefit',
+                ]);
+
+                // Step 3: Trash the remaining amount (if any)
+                if ($employee->benefit_amount > 0) {
+                    $trashedAmount = $employee->benefit_amount;
+                    $employee->benefit_amount = 0;
+                    $employee->save();
+
+                    Transaction::create([
+                        'employee_id' => $employee->id,
+                        'transaction_type' => 'debit',
+                        'amount' => $trashedAmount,
+                        'balance' => 0,
+                        'description' => 'Remaining benefit amount has been trashed',
+                    ]);
+                }
+            } elseif (in_array($user->role, ['company', 'company_subadmin'])) {
+                $company = Company::findOrFail($user->company_id);
+
+                // Step 1: Deduct the order amount
+                $paymentAmount = min($company->benefit_amount, $deductionAmount);
+                $company->benefit_amount -= $paymentAmount;
+                $company->save();
+
+                $this->deleteCompanyOrderDetails($company->id);
+
+                // Step 2: Save the actual order payment transaction
+                $transaction = [
+                    'company_id' => $company->id,
+                    'transaction_type' => 'debit',
+                    'amount' => $paymentAmount,
+                    'balance' => $company->benefit_amount,
+                    'description' => $user->role === 'company_subadmin'
+                        ? 'Order payment by subadmin from company balance'
+                        : 'Order payment from company balance',
+                ];
+
+                if ($user->role === 'company_subadmin') {
+                    $transaction['subadmin_id'] = $user->id;
+                }
+
+                Transaction::create($transaction);
+
+                // Step 3: Trash the remaining amount (if any)
+                if ($company->benefit_amount > 0) {
+                    $trashedAmount = $company->benefit_amount;
+                    $company->benefit_amount = 0;
+                    $company->save();
+
+                    $trashTransaction = [
+                        'company_id' => $company->id,
+                        'transaction_type' => 'debit',
+                        'amount' => $trashedAmount,
+                        'balance' => 0,
+                        'description' => 'Remaining benefit amount has been trashed',
+                    ];
+
+                    if ($user->role === 'company_subadmin') {
+                        $trashTransaction['subadmin_id'] = $user->id;
+                    }
+
+                    Transaction::create($trashTransaction);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Benefit Payment Error: ' . $e->getMessage());
+            throw new \Exception('Failed to process benefit payment.');
+        }
+    }
+
+
+    private function handleFreeOrder($request, $order, $user)
+    {
+        try {
+            if ($user->role === 'employee') {
+                $employee = Employee::findOrFail($user->employee_id);
+
+                // ✅ Reduce free order limit if it's above 0
+                if ($employee->free_order_limit > 0) {
+                    $employee->free_order_limit -= 1;
+                }
+
+                $employee->save();
+
+                // ✅ Clean up any related employee order details
+                $this->deleteEmployeeOrderDetails($employee->id);
+            } elseif (in_array($user->role, ['company', 'company_subadmin'])) {
+                $company = Company::findOrFail($user->company_id);
+
+                // ✅ Reduce company's free order limit if it's above 0
+                if ($company->free_order_limit > 0) {
+                    $company->free_order_limit -= 1;
+                }
+
+                $company->save();
+
+                // ✅ Clean up any related company order details
+                $this->deleteCompanyOrderDetails($company->id);
+            }
+        } catch (\Exception $e) {
+            Log::error('Free Order Handling Error: ' . $e->getMessage());
+            throw new \Exception('Failed to process free order.');
+        }
+    }
+
+
+
+    private function createStripeInvoice($request, $order, $amount, $isPartial = false)
+    {
+        Stripe::setApiKey(config('services.stripe.secret'));
+
+        $customer = Customer::create([
+            'email' => $request->billing_email,
+            'name'  => "{$request->billing_first_name} {$request->billing_last_name}",
+            'phone' => $request->billing_phone_number,
+            'address' => [
+                'line1' => $request->billing_address,
+                'line2' => $request->billing_second_address ?? '',
+                'city' => $request->billing_city,
+                'state' => $request->billing_state,
+                'country' => $request->billing_country,
+                'postal_code' => $request->billing_zip_postal_code,
+            ],
+        ]);
+        $invoice = Invoice::create([
+            'customer' => $customer->id,
+            'collection_method' => 'send_invoice',
+            'days_until_due' => 30,
+            'auto_advance' => false,
+            'description' => 'Order #' . $order->id . ($isPartial ? ' (Partial Benefit Payment)' : ''),
+        ]);
+
+        InvoiceItem::create([
+            'customer' => $customer->id,
+            'amount' => $amount * 100,
+            'currency' => 'usd',
+            'description' => $isPartial ? 'Remaining Order Payment' : 'Order Payment',
+            'invoice' => $invoice->id,
+        ]);
+
+        $finalInvoice = Invoice::retrieve($invoice->id)->finalizeInvoice();
+
+        $order->update([
+            'stripe_invoice_id' => $finalInvoice->id,
+            'stripe_invoice_url' => $finalInvoice->hosted_invoice_url,
+        ]);
+    }
+
+    private function sendOrderMails($order, $request)
+    {
+        try {
+            $user = auth('sanctum')->user();
+            $role = $user->role;
+            $email = null;
+
+            if ($role === 'employee') {
+                $employeeUser = User::where('role', 'employee')
+                    ->where('employee_id', $user->employee_id)
+                    ->first();
+
+                $email = $employeeUser?->email;
+
+                $companyUser = User::where('role', 'company')
+                    ->where('company_id', $employeeUser->company_id)
+                    ->first();
+
+                if ($companyUser) {
+                    Mail::to($companyUser->email)->send(new OrderConfirmationMail($order));
+                }
+            } elseif ($role === 'company') {
+                $companyUser = User::where('role', 'company')
+                    ->where('company_id', $user->company_id)
+                    ->first();
+
+                $email = $companyUser?->email;
+            } elseif ($role === 'company_subadmin') {
+                $subadminUser = User::where('role', 'company_subadmin')
+                    ->where('id', $user->id)
+                    ->first();
+
+                $email = $subadminUser?->email;
+
+                $companyUser = User::where('role', 'company')
+                    ->where('company_id', $subadminUser->company_id)
+                    ->first();
+
+                if ($companyUser) {
+                    Mail::to($companyUser->email)->send(new OrderConfirmationMail($order));
+                }
+            }
+
+            // 📨 Send to the authenticated user
+            if ($email) {
+                Mail::to($email)->send(new OrderConfirmationMail($order));
+            }
+
+            $superAdmin = User::find(1);
+            if ($superAdmin) {
+                Mail::to($superAdmin->email)->send(new OrderMailToSeg($order->id));
+            }
+
+            Mail::to($request->billing_email)->send(new InoviceMail($order->id));
+        } catch (\Exception $e) {
+            Log::error("Failed to send mail for Order ID: {$order->id}. Error: " . $e->getMessage());
         }
     }
 }

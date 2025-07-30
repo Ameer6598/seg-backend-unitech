@@ -159,6 +159,7 @@ class AuthController extends Controller
             'free_order_limit' => $user->role === 'employee'
                 ? Employee::where('id', $user->employee_id)->value('free_order_limit')
                 : Company::where('id', $user->company_id)->value('free_order_limit'),
+            'allow_pay_later' => Company::where('id', $user->company_id)->value('allow_pay_later'),
             'order_count' => $orderCount,
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,

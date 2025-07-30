@@ -67,6 +67,8 @@ class ImpersonationController extends Controller
             'benefit_amount' => $user->role === 'employee'
                 ? Employee::where('id', $user->employee_id)->value('benefit_amount')
                 : Company::where('id', $user->company_id)->value('benefit_amount'),
+            'free_order_limit' => Company::where('id', $user->company_id)->value('free_order_limit'),
+            'allow_pay_later' => Company::where('id', $user->company_id)->value('allow_pay_later'),
             'order_count' => 0,
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
@@ -130,7 +132,11 @@ class ImpersonationController extends Controller
             'token_type' => 'Bearer',
             'role' => $user->role,
             'benefit_amount' => Employee::where('id', $user->employee_id)->value('benefit_amount'),
+            'free_order_limit' => $user->role === 'employee'
+                ? Employee::where('id', $user->employee_id)->value('free_order_limit')
+                : Company::where('id', $user->company_id)->value('free_order_limit'),
             'order_count' => Order::where('employee_id', $user->employee_id)->count(),
+            'allow_pay_later' => Company::where('id', $user->company_id)->value('allow_pay_later'),
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
             'is_pd_missing' => $pdMissing,

@@ -30,19 +30,15 @@ class OrderConfirmationMail extends Mailable
                 'prescription',
                 'shipping_address',
                 'billing_address',
-                'lens_protection:id,title',
-                'blue_light_protection:id,title',
-                'frame_size',
+                'lens_protection_formail:id,title',
+                'blue_light_protection_formail:id,title',
+                'frame_size_formail',
                 'product:product_id,product_name,sku,manufacturer_name,featured_image',
                 'product.manufacturer:manufacturer_id,manufacturer_name',
                 'variant',
             ])
             ->firstOrFail(); // Use firstOrFail to ensure the order exists
 
-   // Log order details in JSON format
-    Log::info('Order Details:', [
-        'order' => $this->order->toArray()
-    ]);
 
             
     }

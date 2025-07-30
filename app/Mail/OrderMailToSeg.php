@@ -22,7 +22,8 @@ class OrderMailToSeg extends Mailable
      */
     public function __construct($orderId)
     {
-        // Fetch the order with related data using the provided order_id
+
+
         $this->order = Order::where('id', $orderId)
             ->with([
                 'employee_data:employee_id,name as employee_name,email',
@@ -30,19 +31,19 @@ class OrderMailToSeg extends Mailable
                 'prescription',
                 'shipping_address',
                 'billing_address',
-                'lens_protection:id,title',
-                'blue_light_protection:id,title',
-                'frame_size:frame_size_id,frame_size_name',
-                'product:product_id,product_name,sku,manufacturer_name',
+                'lens_protection_formail:id,title',
+                'blue_light_protection_formail:id,title',
+                'frame_size_formail',
+                'product:product_id,product_name,sku,manufacturer_name,featured_image',
                 'product.manufacturer:manufacturer_id,manufacturer_name',
                 'variant',
             ])
             ->firstOrFail(); // Use firstOrFail to ensure the order exists
 
-        // Log order details in JSON format
-        Log::info('Order Details:', [
-            'order' => $this->order->toArray()
-        ]);
+
+
+
+
     }
 
     /**

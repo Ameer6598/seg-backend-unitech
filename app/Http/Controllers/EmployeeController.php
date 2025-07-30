@@ -66,7 +66,7 @@ class EmployeeController extends Controller
 
             if ($companyData->is_free_order_deal == 1) {
                 $isFreeOrderDeal = 1;
-                $freeOrderLimit = $companyData->free_order_limit;
+                $freeOrderLimit = $companyData->global_free_order_limit;
                 $startingDate = $companyData->starting_date;
                 $endingDate = $companyData->ending_date;
             }

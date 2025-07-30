@@ -34,10 +34,10 @@ class Order extends Model
     }
 
     public function company()
-{
-    return $this->belongsTo(Company::class, 'company_id', 'id');
-}
- 
+    {
+        return $this->belongsTo(Company::class, 'company_id', 'id');
+    }
+
 
 
     public function orderPoints()
@@ -64,6 +64,12 @@ class Order extends Model
     {
         return $this->hasOne(BlueLightProtection::class, 'id', 'blue_light_protection');
     }
+//formail
+    public function blue_light_protection_formail()
+    {
+        return $this->belongsTo(BlueLightProtection::class, 'blue_light_protection', 'id');
+    }
+
     public function lense_material()
     {
         return $this->hasOne(LensMaterial::class, 'id', 'lense_material');
@@ -82,6 +88,11 @@ class Order extends Model
     {
         return $this->hasOne(LensProtection::class, 'id', 'lens_protection');
     }
+    //formail
+    public function lens_protection_formail()
+    {
+        return $this->belongsTo(LensProtection::class, 'lens_protection', 'id');
+    }
 
     public function color()
     {
@@ -93,8 +104,12 @@ class Order extends Model
         return $this->hasOne(FrameSize::class, 'frame_size_id', 'frame_size');
     }
 
+    public function frame_size_formail()
+    {
+        return $this->belongsTo(FrameSize::class, 'frame_size','frame_size_id');
+    }
 
-    
+
     public function product()
     {
         return $this->hasOne(Product::class, 'product_id', 'product_id')->with('manufacturer');
