@@ -368,6 +368,7 @@ class CompanyController extends Controller
                     'company_logo' => $company->company_logo,
                     'company_Information' => $company->company_Information,
                     'benefits' => $company->benefits,
+                    'allow_pay_later'=>$company->allow_pay_later,
                     'is_benefit_amount_deal' => $company->is_benefit_amount_deal,
                     'is_free_order_deal' => $company->is_free_order_deal,
                     'benefit_amount' => $company->benefit_amount,
