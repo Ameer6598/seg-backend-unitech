@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
 use App\Models\CompanySubadminsPermissions;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\ValidationException;  
 
 class AuthController extends Controller
 {
@@ -145,9 +145,9 @@ class AuthController extends Controller
         if ($user->role === 'employee') {
             $orderCount = Order::where('employee_id', $user->employee_id)->count();
         } elseif ($user->role === 'company') {
-            $orderCount = 0;
+            $orderCount = Order::where('company_id', $user->company_id)->count();
         } elseif ($user->role === 'company_subadmin') {
-            $orderCount = 0;
+            $orderCount = Order::where('company_id', $user->company_id)->count();
         }
         return $this->successResponse(array('model' => 'users'), 'User Login successfully', [
             'access_token' => $token,

@@ -69,7 +69,7 @@ class ImpersonationController extends Controller
                 : Company::where('id', $user->company_id)->value('benefit_amount'),
             'free_order_limit' => Company::where('id', $user->company_id)->value('free_order_limit'),
             'allow_pay_later' => Company::where('id', $user->company_id)->value('allow_pay_later'),
-            'order_count' => 0,
+            'order_count' => Order::where('company_id', $user->company_id)->count(),
             'logourl' => $logoUrl,
             'UserData' => $filteredUserData,
         ]);
